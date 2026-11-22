@@ -38,34 +38,34 @@ const CREDS = { user: 'ana', password: PASSWORD };
 const TLS_FILES = (p: string) => p.endsWith('server.key') || p.endsWith('server.crt');
 
 describe('parseRemoteConfig', () => {
-  const base = { HABBLAUD_REMOTE_USER: 'ana', HABBLAUD_REMOTE_PASSWORD_HASH: HASH_TEXT };
+  const base = { NIKO_PIXEL_REMOTE_USER: 'ana', NIKO_PIXEL_REMOTE_PASSWORD_HASH: HASH_TEXT };
   it('fica desligado sem as variáveis', () => {
     expect(parseRemoteConfig({}, false)).toEqual({});
   });
   it('recusa senha em texto puro e hash ausente ou inválido', () => {
-    expect(parseRemoteConfig({ HABBLAUD_REMOTE_USER: 'a', HABBLAUD_REMOTE_PASSWORD: '12345678' }, false).warning).toMatch(/texto puro/);
-    expect(parseRemoteConfig({ HABBLAUD_REMOTE_USER: 'a' }, false).warning).toMatch(/remote:setup/);
-    expect(parseRemoteConfig({ HABBLAUD_REMOTE_USER: 'a', HABBLAUD_REMOTE_PASSWORD_HASH: 'scrypt:1:2' }, false, TLS_FILES).warning).toMatch(/inválido/);
+    expect(parseRemoteConfig({ NIKO_PIXEL_REMOTE_USER: 'a', NIKO_PIXEL_REMOTE_PASSWORD: '12345678' }, false).warning).toMatch(/texto puro/);
+    expect(parseRemoteConfig({ NIKO_PIXEL_REMOTE_USER: 'a' }, false).warning).toMatch(/remote:setup/);
+    expect(parseRemoteConfig({ NIKO_PIXEL_REMOTE_USER: 'a', NIKO_PIXEL_REMOTE_PASSWORD_HASH: 'scrypt:1:2' }, false, TLS_FILES).warning).toMatch(/inválido/);
   });
-  it('exige HTTPS: sem certificado não sobe, a menos de HABBLAUD_REMOTE_INSECURE_HTTP=1', () => {
+  it('exige HTTPS: sem certificado não sobe, a menos de NIKO_PIXEL_REMOTE_INSECURE_HTTP=1', () => {
     expect(parseRemoteConfig(base, false, () => false).warning).toMatch(/HTTPS é obrigatório/);
-    const insecure = parseRemoteConfig({ ...base, HABBLAUD_REMOTE_INSECURE_HTTP: '1' }, false, () => false).config;
+    const insecure = parseRemoteConfig({ ...base, NIKO_PIXEL_REMOTE_INSECURE_HTTP: '1' }, false, () => false).config;
     expect(insecure?.tls).toBeUndefined();
   });
   it('liga com padrões: porta 4748, só permissões, certificado da pasta padrão', () => {
     const { config } = parseRemoteConfig({ ...base, HOME: '/h' }, false, TLS_FILES);
     expect(config).toMatchObject({ port: 4748, host: '0.0.0.0', user: 'ana' });
-    expect(config?.tls?.certFile).toBe('/h/.habblaud/remote-tls/server/server.crt');
+    expect(config?.tls?.certFile).toBe('/h/.niko-pixel/remote-tls/server/server.crt');
     expect([...config!.allow]).toEqual(['permissions']);
   });
   it('no Docker ignora porta e host (o container escuta sempre em 0.0.0.0:4748) e lê o certificado de /remote-tls', () => {
-    const env = { ...base, HABBLAUD_REMOTE_PORT: '9999', HABBLAUD_REMOTE_HOST: '10.0.0.1' };
+    const env = { ...base, NIKO_PIXEL_REMOTE_PORT: '9999', NIKO_PIXEL_REMOTE_HOST: '10.0.0.1' };
     const docker = parseRemoteConfig(env, true, TLS_FILES).config;
     expect(docker).toMatchObject({ port: 4748, host: '0.0.0.0' });
     expect(docker?.tls?.dir).toBe('/remote-tls');
     expect(parseRemoteConfig(env, false, TLS_FILES).config).toMatchObject({ port: 9999, host: '10.0.0.1' });
   });
-  it('HABBLAUD_REMOTE_ALLOW: lista, ignora nomes desconhecidos, "none" = só ver', () => {
+  it('NIKO_PIXEL_REMOTE_ALLOW: lista, ignora nomes desconhecidos, "none" = só ver', () => {
     expect([...parseAllow('messages, Terminal, bogus')]).toEqual(['messages', 'terminal']);
     expect([...parseAllow('none')]).toEqual([]);
     expect([...parseAllow('')]).toEqual(['permissions']);
@@ -154,7 +154,7 @@ describe('LoginThrottle', () => {
 
 describe('readCookie', () => {
   it('acha o cookie pelo nome', () => {
-    expect(readCookie('a=1; habblaud_remote=v1.x.y; b=2', COOKIE)).toBe('v1.x.y');
+    expect(readCookie('a=1; niko-pixel_remote=v1.x.y; b=2', COOKIE)).toBe('v1.x.y');
     expect(readCookie(undefined, COOKIE)).toBeUndefined();
   });
 });
@@ -165,7 +165,6 @@ interface Harness {
   localBase: string;
   permissionCalls: string[];
   ptyCalls: string[];
-  worldCalls: string[];
   spawn: SpawnService;
   close: () => Promise<void>;
 }
@@ -198,7 +197,6 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
   hub.start();
   const permissionCalls: string[] = [];
   const ptyCalls: string[] = [];
-  const worldCalls: string[] = [];
   const spawn = new SpawnService();
   const api = createApiHandler({
     office,
@@ -225,17 +223,12 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
     },
     renameRoom: () => 'sala',
     remote: { is: isRemoteRequest, allows: (f) => allowSet.has(f) },
-    world: (req, res, url) => {
-      req.resume();
-      worldCalls.push(`${req.method} ${url.pathname}`);
-      sendJson(res, 200, { ok: true });
-    },
   });
   const guard = createRequestGuard();
   const gate = createRemoteGate({ config: CFG, sessions: new RemoteSessions(SECRET, CFG), secure: false });
   const page = (_req: http.IncomingMessage, res: http.ServerResponse) => {
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end('<!doctype html><title>Habblaud</title>');
+    res.end('<!doctype html><title>Niko-Pixel</title>');
   };
   const local = http.createServer((req, res) => {
     if (guard(req, res)) return;
@@ -263,7 +256,6 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
     remoteBase: `http://127.0.0.1:${(remote.address() as AddressInfo).port}`,
     permissionCalls,
     ptyCalls,
-    worldCalls,
     spawn,
     close,
   };
@@ -338,51 +330,6 @@ describe('porta remota', () => {
     // Na porta local, o hook e o terminal interativo seguem como antes.
     expect((await request(s.localBase, '/api/permissions', { method: 'POST', body: {} })).status).toBe(200);
     expect((await request(s.localBase, '/api/pty')).status).toBe(200);
-  });
-
-  it('Habblaud World: nenhuma rota pela porta do celular, nem logado com tudo liberado e Host imitando localhost', async () => {
-    const s = await start(['permissions', 'messages', 'terminal', 'spawn']);
-    const cookie = await login(s.remoteBase);
-    const headers = { Cookie: cookie, Host: 'localhost' };
-    const routes: Array<[string, string]> = [
-      ['GET', '/api/world/status'],
-      ['POST', '/api/world/register'],
-      ['POST', '/api/world/verify'],
-      ['POST', '/api/world/login'],
-      ['POST', '/api/world/logout'],
-      ['POST', '/api/world/resend'],
-      ['POST', '/api/world/password/forgot'],
-      ['POST', '/api/world/password/reset'],
-      ['PUT', '/api/world/character'],
-      ['PUT', '/api/world/visibility'],
-      ['GET', '/api/world/devices'],
-      ['POST', '/api/world/devices/d1/revoke'],
-      ['PUT', '/api/world/theme'],
-      ['POST', '/api/world/pause'],
-      ['POST', '/api/world/resume'],
-      ['GET', '/api/world/last-uplink'],
-      ['POST', '/api/world/leave'],
-      ['POST', '/api/world/join'],
-      ['GET', '/api/world/stream'],
-      ['POST', '/api/world/cmd'],
-      ['POST', '/api/world/delete-account'],
-      ['POST', '/api/world/delete-account/confirm'],
-      ['GET', '/api/world/export'],
-      ['POST', '/api/world/summary/seen'],
-      ['POST', '/api/world/unblock'],
-    ];
-    for (const [method, path] of routes) {
-      const r = await request(s.remoteBase, path, { method, headers, ...(method === 'GET' ? {} : { body: {} }) });
-      expect(r.status, `${method} ${path}`).toBe(403);
-      expect(JSON.parse(r.body).error.code).toBe('local_only');
-    }
-    expect(s.worldCalls).toEqual([]);
-    expect(JSON.parse((await request(s.remoteBase, '/api/access', { headers })).body).world).toBe(false);
-    // Na porta local, com Host local, as rotas chegam ao Habblaud World.
-    expect((await request(s.localBase, '/api/world/status')).status).toBe(200);
-    expect((await request(s.localBase, '/api/world/status', { headers: { Host: '192.168.0.10:4747' } })).status).toBe(403);
-    expect(s.worldCalls).toEqual(['GET /api/world/status']);
-    expect(JSON.parse((await request(s.localBase, '/api/access')).body).world).toBe(true);
   });
 
   it('novo agente: só com spawn liberado no celular; o auxiliar do host nunca pela porta remota', async () => {
@@ -498,13 +445,13 @@ describe('porta remota', () => {
     ] as const) {
       const r = await request(h.remoteBase, path, { method: 'POST', headers, body });
       expect(r.status, path).toBe(403);
-      expect(JSON.parse(r.body).error).toMatch(/HABBLAUD_REMOTE_ALLOW/);
+      expect(JSON.parse(r.body).error).toMatch(/NIKO_PIXEL_REMOTE_ALLOW/);
     }
     expect((await request(h.remoteBase, '/api/agents/x/terminal', { headers })).status).toBe(403);
     expect((await request(h.remoteBase, '/api/sessions/recent', { headers })).status).toBe(403);
   });
 
-  it('HABBLAUD_REMOTE_ALLOW=messages libera mensagens e "none" tira até as permissões', async () => {
+  it('NIKO_PIXEL_REMOTE_ALLOW=messages libera mensagens e "none" tira até as permissões', async () => {
     const withMessages = await start(['messages']);
     const c1 = await login(withMessages.remoteBase);
     expect((await request(withMessages.remoteBase, '/api/messages', { method: 'POST', headers: { Cookie: c1 }, body: {} })).status).toBe(200);
@@ -584,15 +531,13 @@ describe('GET /api/access (o que a página pode fazer)', () => {
       messages: false,
       terminal: false,
       spawn: false,
-      world: false,
     });
-    expect(JSON.parse((await request(h.localBase, '/api/access')).body)).toEqual({ remote: false, local: true, permissions: true, messages: true, terminal: false, spawn: true, world: true });
+    expect(JSON.parse((await request(h.localBase, '/api/access')).body)).toEqual({ remote: false, local: true, permissions: true, messages: true, terminal: false, spawn: true });
     expect(JSON.parse((await request(h.localBase, '/api/access', { headers: { Host: '192.168.1.5:4747' } })).body)).toMatchObject({
       local: false,
       permissions: false,
       messages: false,
       spawn: false,
-      world: false,
     });
     expect((await request(h.remoteBase, '/api/access')).status).toBe(401);
   });

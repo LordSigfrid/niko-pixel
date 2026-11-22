@@ -1,7 +1,7 @@
 // Responder pelo escritório: cartão do pedido de permissão na gaveta do agente (Aprovar, Recusar com
 // motivo, "sempre permitir" e Responder no terminal) ou das perguntas do AskUserQuestion (opções, "Outro" e
 // Responder), e os atalhos que levam até ele (aviso, contador da barra superior e tecla P). O pedido chega
-// pelo hook PermissionRequest (mod/habblaud-permissoes/hooks/permission-hook.mjs); o diálogo continua no
+// pelo hook PermissionRequest (mod/niko-pixel-permissoes/hooks/permission-hook.mjs); o diálogo continua no
 // terminal e vale o que for respondido primeiro.
 // Pedido do Codex (`provider: 'codex'`): o hook dele só espera alguns segundos e o terminal só mostra a aprovação
 // depois que você responder aqui ou o prazo acabar; não há "sempre permitir" nem "interromper", e recusar pede um
@@ -17,7 +17,7 @@ import { diffLineKind, moreLabel, previewText, showToolInput, splitToolTitle } f
 import { tr } from '../../../shared/i18n';
 
 /** Evento (em ctx.root) que pede para o cartão de um agente aparecer: rolar até ele e receber o foco. */
-export const PERMISSION_FOCUS_EVENT = 'habblaud:permission-focus';
+export const PERMISSION_FOCUS_EVENT = 'niko-pixel:permission-focus';
 const PREVIEW_LINES = 12;
 const MESSAGE_MAX = 1_000;
 
@@ -70,7 +70,7 @@ export function permissionOptions(p: Pick<PermissionRequestInfo, 'provider' | 's
     interrupt: true,
     reasonRequired: false,
     seconds: false,
-    note: blocking ? tr('Este subagente roda em segundo plano: o terminal só mostra o pedido depois que você responder aqui ou escolher “Responder no terminal”.') : '',
+    note: blocking ? tr('Este reforço roda em segundo plano: o terminal só mostra o pedido depois que você responder aqui ou escolher “Responder no terminal”.') : '',
   };
 }
 
@@ -232,20 +232,20 @@ export class PermissionCard {
     this.preview = h('div', { class: 'ui-perm__preview' });
     this.note = h('p', { class: 'ui-perm__note', hidden: true });
     this.queue = h('p', { class: 'ui-perm__queue', hidden: true });
-    this.remote = h('p', { class: 'ui-perm__note', hidden: true, text: tr('Para responder por aqui, abra o Habblaud por http://localhost (ou 127.0.0.1). Por enquanto, responda no terminal.') });
+    this.remote = h('p', { class: 'ui-perm__note', hidden: true, text: tr('Para responder por aqui, abra o Niko-Pixel por http://localhost (ou 127.0.0.1). Por enquanto, responda no terminal.') });
 
-    this.approveBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--allow', type: 'button', on: { click: () => this.send({ behavior: 'allow' }) } }, tr('✓ Aprovar'));
+    this.approveBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--allow', type: 'button', on: { click: () => this.send({ behavior: 'allow' }) } }, tr('✓ Autorizar'));
     this.answerBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--allow', type: 'button', hidden: true, on: { click: () => this.sendAnswer() } }, tr('✓ Responder'));
-    this.askForm = h('form', { class: 'ui-perm-ask', hidden: true, attrs: { 'aria-label': tr('Perguntas do agente') } });
+    this.askForm = h('form', { class: 'ui-perm-ask', hidden: true, attrs: { 'aria-label': tr('Perguntas do operador') } });
     this.askForm.addEventListener('submit', (e) => {
       e.preventDefault();
       this.sendAnswer();
     });
     this.askForm.addEventListener('change', () => this.syncAnswer());
-    this.denyBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--deny', type: 'button', attrs: { 'aria-expanded': 'false' }, on: { click: () => this.toggleDeny() } }, tr('✕ Recusar…'));
+    this.denyBtn = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--deny', type: 'button', attrs: { 'aria-expanded': 'false' }, on: { click: () => this.toggleDeny() } }, tr('✕ Negar…'));
     this.terminalBtn = h(
       'button',
-      { class: 'ui-btn ui-perm__btn', type: 'button', title: tr('O Habblaud deixa este pedido de lado: vale o que você responder no terminal'), on: { click: () => this.send({ behavior: 'terminal' }) } },
+      { class: 'ui-btn ui-perm__btn', type: 'button', title: tr('O Niko-Pixel deixa este pedido de lado: vale o que você responder no terminal'), on: { click: () => this.send({ behavior: 'terminal' }) } },
       tr('Responder no terminal'),
     );
 
@@ -257,15 +257,15 @@ export class PermissionCard {
       update: (btn, s) => {
         const rules = s.rules.join(', ');
         setText(btn, `${rules} · ${destinationLabel(s.destination)}`);
-        setTitle(btn, tr('Aprovar agora e não perguntar de novo: {0} ({1})', [rules, destinationLabel(s.destination)]));
+        setTitle(btn, tr('Autorizar agora e não perguntar de novo: {0} ({1})', [rules, destinationLabel(s.destination)]));
       },
     });
-    this.always = h('div', { class: 'ui-perm__always', hidden: true }, h('span', { class: 'ui-perm__always-label', text: tr('Aprovar e não perguntar de novo:') }), list);
+    this.always = h('div', { class: 'ui-perm__always', hidden: true }, h('span', { class: 'ui-perm__always-label', text: tr('Autorizar e não perguntar de novo:') }), list);
 
-    this.reason = h('textarea', { class: 'ui-perm__reason', attrs: { rows: 2, maxlength: MESSAGE_MAX, placeholder: tr('Motivo (opcional, vai para o agente). Ex.: use pnpm em vez de npm'), 'aria-label': tr('Motivo da recusa (opcional)') } });
+    this.reason = h('textarea', { class: 'ui-perm__reason', attrs: { rows: 2, maxlength: MESSAGE_MAX, placeholder: tr('Motivo (opcional, vai para o operador). Ex.: use pnpm em vez de npm'), 'aria-label': tr('Motivo da recusa (opcional)') } });
     this.interrupt = h('input', { type: 'checkbox', class: 'ui-perm__check' });
-    this.interruptRow = h('label', { class: 'ui-perm__check-row' }, this.interrupt, h('span', { text: tr('Interromper o agente (ele para e espera você)') }));
-    this.denySubmit = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--deny', type: 'submit' }, tr('Recusar'));
+    this.interruptRow = h('label', { class: 'ui-perm__check-row' }, this.interrupt, h('span', { text: tr('Interromper o operador (ele para e espera você)') }));
+    this.denySubmit = h('button', { class: 'ui-btn ui-perm__btn ui-perm__btn--deny', type: 'submit' }, tr('Negar'));
     this.denyForm = h(
       'form',
       { class: 'ui-perm__deny', hidden: true },
@@ -333,17 +333,17 @@ export class PermissionCard {
     if (this.el.dataset.kind !== kind) {
       this.el.dataset.kind = kind;
       this.icon.innerHTML = ask ? ICONS.help : ICONS.lock;
-      setAttr(this.el, 'aria-label', ask ? tr('Pergunta do agente') : tr('Pedido de permissão'));
+      setAttr(this.el, 'aria-label', ask ? tr('Pergunta do operador') : tr('Pedido de permissão'));
     }
     setText(this.title, ask ? (p.questions!.length > 1 ? tr('Perguntas para você') : tr('Pergunta para você')) : tr('Pede permissão'));
-    const by = p.subagent ? tr(' · subagente {0}', [p.subagent]) : '';
+    const by = p.subagent ? tr(' · reforço {0}', [p.subagent]) : '';
     setText(this.what, ask ? tr('Aqui ou no terminal: vale a primeira resposta{0}', [by]) :`${p.icon} ${p.text}${by}`);
     setText(this.timer, expiryText(p.expiresAt, now, opts.seconds));
     setTitle(
       this.timer,
       codex
-        ? tr('Pedido feito às {0}. Sem resposta aqui até {1}, o Codex segue sem a decisão do escritório e pede a aprovação no terminal.', [formatClock(p.createdAt), formatClock(p.expiresAt)])
-        : tr('Pedido feito às {0}. Sem resposta aqui até {1}, o Habblaud devolve o pedido ao terminal.', [formatClock(p.createdAt), formatClock(p.expiresAt)]),
+        ? tr('Pedido feito às {0}. Sem resposta aqui até {1}, o Codex segue sem a decisão do quartel-general e pede a aprovação no terminal.', [formatClock(p.createdAt), formatClock(p.expiresAt)])
+        : tr('Pedido feito às {0}. Sem resposta aqui até {1}, o Niko-Pixel devolve o pedido ao terminal.', [formatClock(p.createdAt), formatClock(p.expiresAt)]),
     );
 
     // Pergunta: o formulário com as opções no lugar do título da ferramenta e da prévia dos argumentos.
@@ -370,7 +370,7 @@ export class PermissionCard {
     setHidden(this.note, !opts.note);
     setText(this.note, opts.note);
     setHidden(this.queue, !p.queued);
-    setText(this.queue, p.queued ? tr('+{0} {1} deste agente na fila', [p.queued, p.queued === 1 ? tr('pedido') : tr('pedidos')]) : '');
+    setText(this.queue, p.queued ? tr('+{0} {1} deste operador na fila', [p.queued, p.queued === 1 ? tr('pedido') : tr('pedidos')]) : '');
 
     setHidden(this.remote, this.isLocal());
     const busy = this.isBusy();
@@ -379,10 +379,10 @@ export class PermissionCard {
     for (const b of [this.approveBtn, this.denyBtn, this.terminalBtn]) b.disabled = busy;
     for (const el of this.askForm.querySelectorAll('input')) el.disabled = busy;
     if (ask) this.syncAnswer();
-    setTitle(this.denyBtn, ask ? tr('Não responder: o agente segue sem a resposta (com o motivo, se você escrever um)') : codex ? tr('Recusar com um motivo (o Codex pede um)') : '');
+    setTitle(this.denyBtn, ask ? tr('Não responder: o operador segue sem a resposta (com o motivo, se você escrever um)') : codex ? tr('Negar com um motivo (o Codex pede um)') : '');
     setTitle(
       this.terminalBtn,
-      codex ? tr('O Habblaud solta o pedido agora: o Codex mostra a aprovação no terminal') : tr('O Habblaud deixa este pedido de lado: vale o que você responder no terminal'),
+      codex ? tr('O Niko-Pixel solta o pedido agora: o Codex mostra a aprovação no terminal') : tr('O Niko-Pixel deixa este pedido de lado: vale o que você responder no terminal'),
     );
     this.suggestions.sync(opts.always ? (p.suggestions ?? []) : []);
     for (const b of this.suggestions.container.querySelectorAll('button')) b.disabled = busy;
@@ -393,8 +393,8 @@ export class PermissionCard {
       this.reason,
       'placeholder',
       opts.reasonRequired
-        ? tr('Motivo (obrigatório no Codex, vai para o agente). Ex.: use pnpm em vez de npm')
-        : tr('Motivo (opcional, vai para o agente). Ex.: {0}', [ask ? tr('decida você, com o que for mais seguro') : tr('use pnpm em vez de npm')]),
+        ? tr('Motivo (obrigatório no Codex, vai para o operador). Ex.: use pnpm em vez de npm')
+        : tr('Motivo (opcional, vai para o operador). Ex.: {0}', [ask ? tr('decida você, com o que for mais seguro') : tr('use pnpm em vez de npm')]),
     );
     setAttr(this.reason, 'aria-label', opts.reasonRequired ? tr('Motivo da recusa (obrigatório)') : tr('Motivo da recusa (opcional)'));
     for (const el of this.denyForm.querySelectorAll<HTMLButtonElement | HTMLTextAreaElement | HTMLInputElement>('button, textarea, input')) el.disabled = busy;
@@ -465,7 +465,7 @@ export class PermissionCard {
     try {
       error = await this.ctx.store.decidePermission(id, d);
     } catch {
-      error = tr('Não foi possível falar com o Habblaud. Responda no terminal.');
+      error = tr('Não foi possível falar com o Niko-Pixel. Responda no terminal.');
     }
     if (this.id !== id) return;
     if (error) {
@@ -476,7 +476,7 @@ export class PermissionCard {
       this.phase = 'sent';
       const done = DONE[d.behavior];
       setText(this.status, `${done}.`);
-      this.ctx.announce(`${done}: ${this.ctx.agent(this.agentId)?.name ?? tr('agente')}.`);
+      this.ctx.announce(`${done}: ${this.ctx.agent(this.agentId)?.name ?? tr('operador')}.`);
     }
     this.ctx.invalidate();
   }
@@ -555,7 +555,7 @@ export class PermissionCard {
   private syncAnswer(): void {
     const ready = !!this.answers();
     this.answerBtn.disabled = this.isBusy() || !ready;
-    setTitle(this.answerBtn, ready ? tr('Mandar as respostas ao agente') : tr('Responda todas as perguntas (no “Outro”, escreva a resposta)'));
+    setTitle(this.answerBtn, ready ? tr('Mandar as respostas ao operador') : tr('Responda todas as perguntas (no “Outro”, escreva a resposta)'));
   }
 
   private sendAnswer(): void {

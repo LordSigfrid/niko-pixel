@@ -10,6 +10,7 @@ import { access } from '../net/access';
 import { createAvatar } from './avatar';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
+import { tacticalIcon } from './tactical-icons';
 import { formatDuration, relativeTime } from './format';
 import { ICONS } from './icons';
 import { renderMarkdown } from './markdown';
@@ -17,7 +18,7 @@ import type { TerminalControl } from './terminal';
 
 export const DELIVERIES_URL = '/api/deliveries';
 const POLL_MS = 30_000;
-const SEEN_KEY = 'habblaud.deliveries.seen';
+const SEEN_KEY = 'niko-pixel.deliveries.seen';
 const TOAST_MS = 9_000;
 
 // ---------------------------------------------------------------- modelo (puro)
@@ -138,18 +139,18 @@ export class Deliveries implements UiComponent {
     private readonly terminal: TerminalControl,
   ) {
     this.badge = h('span', { class: 'ui-deliv-badge', hidden: true, attrs: { 'aria-hidden': 'true' } });
-    this.button = iconButton(ICONS.delivery, tr('Entregas: o que os agentes terminaram'), () => this.togglePanel(), 'ui-btn-deliv');
+    this.button = iconButton(tacticalIcon('delivery', ICONS.delivery), tr('Missões cumpridas: o que os operadores terminaram'), () => this.togglePanel(), 'ui-btn-deliv');
     this.button.setAttribute('aria-haspopup', 'dialog');
     this.button.append(this.badge);
     this.button.hidden = true;
 
-    this.listEl = h('ul', { class: 'ui-deliv-list', attrs: { 'aria-label': tr('Entregas') } });
-    this.empty = h('p', { class: 'ui-deliv-empty', text: tr('Carregando as entregas…') });
+    this.listEl = h('ul', { class: 'ui-deliv-list', attrs: { 'aria-label': tr('Missões cumpridas') } });
+    this.empty = h('p', { class: 'ui-deliv-empty', text: tr('Carregando as missões…') });
     this.panel = h(
       'div',
-      { class: 'ui-popover ui-deliv', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Entregas'), id: 'ui-deliveries', popover: 'auto' } },
-      h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Entregas') }), iconButton(ICONS.close, tr('Fechar'), () => this.hidePanel(), 'ui-icon-btn--sm')),
-      h('p', { class: 'ui-deliv-lead', text: tr('O que cada agente terminou, em poucas palavras. Toque para ver o pedido, a resposta e os anexos.') }),
+      { class: 'ui-popover ui-deliv', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Missões cumpridas'), id: 'ui-deliveries', popover: 'auto' } },
+      h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Missões cumpridas') }), iconButton(ICONS.close, tr('Fechar'), () => this.hidePanel(), 'ui-icon-btn--sm')),
+      h('p', { class: 'ui-deliv-lead', text: tr('O que cada operador terminou, em poucas palavras. Toque para ver o pedido, a resposta e os anexos.') }),
       this.empty,
       this.listEl,
     );
@@ -159,7 +160,7 @@ export class Deliveries implements UiComponent {
     });
 
     this.modalBody = h('div', { class: 'ui-deliv-modal__body' });
-    this.modal = h('dialog', { class: 'ui-deliv-modal', attrs: { 'aria-label': tr('Entrega') } }, this.modalBody) as HTMLDialogElement;
+    this.modal = h('dialog', { class: 'ui-deliv-modal', attrs: { 'aria-label': tr('Missão') } }, this.modalBody) as HTMLDialogElement;
     this.modal.addEventListener('click', (e) => {
       if (e.target === this.modal) this.modal.close();
     });
@@ -268,7 +269,7 @@ export class Deliveries implements UiComponent {
     const n = this.panelOpen ? 0 : unseenCount(this.list, this.seenAt);
     setText(this.badge, n > 9 ? '9+' : String(n));
     setHidden(this.badge, n === 0);
-    this.button.setAttribute('aria-label', n > 1 ? tr('Entregas: {0} novas', [n]) : n === 1 ? tr('Entregas: 1 nova') : tr('Entregas: o que os agentes terminaram'));
+    this.button.setAttribute('aria-label', n > 1 ? tr('Missões cumpridas: {0} novas', [n]) : n === 1 ? tr('Missões cumpridas: 1 nova') : tr('Missões cumpridas: o que os operadores terminaram'));
   }
 
   private togglePanel(): void {
@@ -294,7 +295,7 @@ export class Deliveries implements UiComponent {
   private renderList(highlightAfter = this.seenAt): void {
     const now = Date.now();
     setHidden(this.empty, this.list.length > 0);
-    setText(this.empty, this.error ? tr('Não deu para carregar: {0}', [this.error]) : this.loaded ? tr('Nenhuma entrega nos últimos 7 dias.') : tr('Carregando as entregas…'));
+    setText(this.empty, this.error ? tr('Não deu para carregar: {0}', [this.error]) : this.loaded ? tr('Nenhuma missão cumprida nos últimos 7 dias.') : tr('Carregando as missões…'));
     this.listEl.replaceChildren(...this.list.map((d) => h('li', {}, this.card(d, now, d.finishedAt > highlightAfter))));
   }
 
@@ -315,7 +316,7 @@ export class Deliveries implements UiComponent {
         'span',
         { class: 'ui-deliv-card__who' },
         this.who(d, 'sm'),
-        h('span', { class: 'ui-deliv-card__name', text: d.agentName ?? tr('Agente') }),
+        h('span', { class: 'ui-deliv-card__name', text: d.agentName ?? tr('Operador') }),
         d.project ? h('span', { class: 'ui-deliv-card__project', text: projectName(d.project) }) : null,
         h('span', { class: 'ui-deliv-card__when', text: relativeTime(d.finishedAt, now) }),
         isNew ? h('span', { class: 'ui-deliv-card__new', text: tr('nova') }) : null,
@@ -363,7 +364,7 @@ export class Deliveries implements UiComponent {
         h(
           'div',
           { class: 'ui-deliv-modal__who' },
-          h('strong', { text: d.agentName ?? tr('Agente') }),
+          h('strong', { text: d.agentName ?? tr('Operador') }),
           h('span', { text: [projectName(d.project), relativeTime(d.finishedAt, now), workLine(d)].filter(Boolean).join(' · ') }),
         ),
         iconButton(ICONS.close, tr('Fechar'), () => this.modal.close(), 'ui-icon-btn--sm'),
@@ -470,7 +471,7 @@ export class Deliveries implements UiComponent {
     this.current = d;
     this.toast.replaceChildren(
       h('span', { class: 'ui-deliv-toast__icon', attrs: { 'aria-hidden': 'true' } }),
-      h('span', { class: 'ui-deliv-toast__text' }, h('b', { text: d.agentName ? tr('{0} entregou', [d.agentName]) : tr('Um agente entregou') }), h('span', { text: count > 1 ? `${d.headline} (+${count - 1})` : d.headline })),
+      h('span', { class: 'ui-deliv-toast__text' }, h('b', { text: d.agentName ? tr('{0} cumpriu a missão', [d.agentName]) : tr('Um operador cumpriu a missão') }), h('span', { text: count > 1 ? `${d.headline} (+${count - 1})` : d.headline })),
     );
     (this.toast.firstChild as HTMLElement).innerHTML = ICONS.delivery;
     setHidden(this.toast, false);

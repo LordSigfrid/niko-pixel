@@ -1,5 +1,5 @@
-// Caixa de mensagem: manda um texto ao agente principal pelo Habblaud (POST /api/messages) e o plugin
-// habblaud-mensagens o entrega à sessão como se você o tivesse digitado (no Codex, `codex queue` a põe na fila da
+// Caixa de mensagem: manda um texto ao agente principal pelo Niko-Pixel (POST /api/messages) e o plugin
+// niko-pixel-mensagens o entrega à sessão como se você o tivesse digitado (no Codex, `codex queue` a põe na fila da
 // sessão, que a usa quando fica ociosa). Fica na gaveta do agente e no rodapé do
 // terminal (só a sessão ao vivo). Enter manda, Shift+Enter quebra a linha; a linha de situação acompanha a entrega
 // (GET /api/messages/:id) até ela se resolver. As teclas digitadas aqui não disparam os atalhos globais. O rascunho de
@@ -89,7 +89,7 @@ export class MessageComposer {
         class: term ? 'ui-msg__send' : 'ui-btn ui-msg__send',
         type: 'button',
         title: tr('Mandar (Enter)'),
-        attrs: { 'aria-label': tr('Mandar a mensagem') },
+        attrs: { 'aria-label': tr('Transmitir a ordem') },
         on: { click: () => void this.send() },
       },
       term ? '↵' : tr('Enviar'),
@@ -146,10 +146,10 @@ export class MessageComposer {
       if (ready) requestAnimationFrame(() => this.resize());
     }
     this.box.disabled = !ready;
-    const name = agent?.name ?? tr('o agente');
-    const placeholder = ready ? (term ? tr('Mensagem para {0} (Enter manda, Shift+Enter quebra a linha)', [name]) : tr('Mensagem para {0}…', [name])) : mode.text;
+    const name = agent?.name ?? tr('o operador');
+    const placeholder = ready ? (term ? tr('Ordem por rádio para {0} (Enter manda, Shift+Enter quebra a linha)', [name]) : tr('Ordem por rádio para {0}…', [name])) : mode.text;
     setAttr(this.box, 'placeholder', placeholder);
-    setAttr(this.box, 'aria-label', ready ? tr('Mensagem para {0}', [name]) : mode.text);
+    setAttr(this.box, 'aria-label', ready ? tr('Ordem por rádio para {0}', [name]) : mode.text);
     setTitle(this.box, ready ? '' : mode.text);
     this.row.classList.toggle('is-disabled', !ready);
     setHidden(this.sendBtn, !ready);

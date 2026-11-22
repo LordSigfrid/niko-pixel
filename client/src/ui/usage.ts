@@ -3,7 +3,7 @@
 // - número velho nunca passa por atual: janela que já renovou depois da leitura mostra "—" e "renovada";
 //   números antigos ficam acinzentados com a idade ("há 6 d") no cabeçalho ou, no celular, um selo no chip;
 // - o reinício vem com verbo implícito no ícone ↻ e contagem regressiva quando falta menos de um dia;
-// - conta sem números diz "sem dados de uso" e oferece "Como ativar" (mod do Habblaud, recomendado).
+// - conta sem números diz "sem dados de uso" e oferece "Como ativar" (mod do Niko-Pixel, recomendado).
 // Conta do Codex: os números vêm dos arquivos de sessão dele, que só se renovam enquanto alguma sessão roda; por isso
 // a idade ("há 12 min") fica sempre à mostra. Sem cota nem créditos ("sem cota") nunca vira 0%. Não há o que
 // instalar para o uso: "Como funciona" abre a ajuda na seção do Codex. Sem Opus/Sonnet nem e-mail (só o plano).
@@ -23,9 +23,9 @@ export const SOURCE_LABEL: Record<NonNullable<AccountInfo['usage']>['source'], s
   codex: tr('arquivos do Codex'),
 };
 
-/** Origem para mostrar: o arquivo ao vivo pode ter sido gravado pelo mod do Habblaud ou pelo tap. */
+/** Origem para mostrar: o arquivo ao vivo pode ter sido gravado pelo mod do Niko-Pixel ou pelo tap. */
 export function sourceLabel(u: NonNullable<AccountInfo['usage']>): string {
-  if (u.source === 'statusline' && u.via === 'mod') return tr('ao vivo (mod do Habblaud)');
+  if (u.source === 'statusline' && u.via === 'mod') return tr('ao vivo (mod do Niko-Pixel)');
   return SOURCE_LABEL[u.source] ?? u.source;
 }
 
@@ -36,13 +36,13 @@ export function sourceLabel(u: NonNullable<AccountInfo['usage']>): string {
 export const USAGE_SETUP_STEPS: readonly [string, string][] = [
   [
     'npm run mod:install',
-    tr('Recomendado: instala o mod do Habblaud no Claude Code (2.1.287 ou mais novo), que passa o uso de 5 h e da semana ao vivo. Rode na pasta do Habblaud, no computador onde o Claude Code roda; nas sessões já abertas, `/reload-plugins`.'),
+    tr('Recomendado: instala o mod do Niko-Pixel no Claude Code (2.1.287 ou mais novo), que passa o uso de 5 h e da semana ao vivo. Rode na pasta do Niko-Pixel, no computador onde o Claude Code roda; nas sessões já abertas, `/reload-plugins`.'),
   ],
   [
     'npm run usage:install',
     tr('No Claude Code anterior ao 2.1.287: liga um tap na linha de status, que passa os mesmos números ao vivo.'),
   ],
-  ['/usage', tr('Sem instalar nada: rode `/usage` no Claude Code desta conta para atualizar o cache (os números envelhecem até a próxima vez).')],
+  ['/usage', tr('Sem instalar nada: rode `/usage` no Claude Code desta equipe para atualizar o cache (os números envelhecem até a próxima vez).')],
 ];
 
 /** Texto com trechos `assim` como código. */
@@ -197,7 +197,7 @@ export function codexUsageNote(a: Pick<AccountInfo, 'usage' | 'usageStatus' | 'p
   if (state === 'empty') return tr('Não precisa instalar nada: os números chegam com a próxima sessão do Codex.');
   const age = u ? relativeTime(u.fetchedAt, now) : '';
   if (state === 'noquota')
-    return tr('Na última leitura ({0}), a conta estava sem cota nem créditos para usar (ex.: os créditos do workspace acabaram). Não é 0%: o Codex não informou as janelas. Os números voltam com a próxima sessão.', [age]);
+    return tr('Na última leitura ({0}), a equipe estava sem cota nem créditos para usar (ex.: os créditos do workspace acabaram). Não é 0%: o Codex não informou as janelas. Os números voltam com a próxima sessão.', [age]);
   return tr('O Codex só grava o uso enquanto alguma sessão roda: estes números são da última leitura ({0}).', [age]);
 }
 
@@ -207,7 +207,7 @@ export class UsageCards {
   private refs = new WeakMap<HTMLElement, CardRefs>();
 
   constructor(private ctx: UiContext) {
-    this.el = h('div', { class: 'ui-usage', role: 'group', attrs: { 'aria-label': tr('Uso por conta') } });
+    this.el = h('div', { class: 'ui-usage', role: 'group', attrs: { 'aria-label': tr('Uso por equipe') } });
     this.list = new KeyedList<AccountInfo>(this.el, {
       key: (a) => a.id,
       create: () => this.createCard(),
@@ -287,7 +287,7 @@ export class UsageCards {
       {
         class: 'ui-usage-card__how',
         type: 'button',
-        title: tr('Como mostrar o uso desta conta (abre a ajuda em “Contas e uso”)'),
+        title: tr('Como mostrar o uso desta equipe (abre a ajuda em “Equipes e uso”)'),
         on: { click: () => this.ctx.openHelp(howBtn.dataset.help === 'codex' ? 'codex' : 'usage') },
       },
       howLong,
@@ -387,7 +387,7 @@ export class UsageCards {
     setText(r.howLong, codex ? tr('Como funciona') : tr('Como ativar'));
     setText(r.howShort, codex ? tr('Saber') : tr('Ativar'));
     r.how.dataset.help = codex ? 'codex' : 'usage';
-    setTitle(r.how, codex ? tr('Como o uso do Codex chega ao Habblaud (abre a ajuda em “Codex”)') : tr('Como mostrar o uso desta conta (abre a ajuda em “Contas e uso”)'));
+    setTitle(r.how, codex ? tr('Como o uso do Codex chega ao Niko-Pixel (abre a ajuda em “Codex”)') : tr('Como mostrar o uso desta equipe (abre a ajuda em “Equipes e uso”)'));
     this.updateTip(r, a, state, five, week, now);
   }
 
@@ -429,9 +429,9 @@ export class UsageCards {
 
     let note = '';
     if (state === 'empty')
-      note = u ? tr('A última leitura ({0}, {1}) não trouxe números de 5 h nem da semana.', [sourceLabel(u), relativeTime(u.fetchedAt, now)]) : tr('Ainda não há números de uso para esta conta.');
+      note = u ? tr('A última leitura ({0}, {1}) não trouxe números de 5 h nem da semana.', [sourceLabel(u), relativeTime(u.fetchedAt, now)]) : tr('Ainda não há números de uso para esta equipe.');
     else if (state === 'stale') note = tr('Números antigos: refletem a última leitura, não o uso de agora.');
-    else if (u?.source === 'cache') note = tr('Cache do /usage: atualiza quando alguém roda /usage nesta conta.');
+    else if (u?.source === 'cache') note = tr('Cache do /usage: atualiza quando alguém roda /usage nesta equipe.');
     else if (five?.renewed || week?.renewed) note = tr('Uma das janelas já reiniciou depois da última leitura.');
     setText(r.tipNote, note);
     setHidden(r.tipNote, !note);

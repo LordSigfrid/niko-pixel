@@ -131,7 +131,7 @@ describe('utilidades', () => {
   });
   it('roleLabel', () => {
     expect(roleLabel({ kind: 'main', role: 'Agente principal' })).toBe('Agente principal');
-    expect(roleLabel({ kind: 'sub', role: '' })).toBe('Subagente');
+    expect(roleLabel({ kind: 'sub', role: '' })).toBe('Reforço');
   });
   it('aggregateTasks soma tarefas de vários agentes', () => {
     expect(aggregateTasks(agents)).toEqual({ completed: 1, inProgress: 1, total: 3 });
@@ -182,13 +182,13 @@ describe('utilidades', () => {
 
 describe('activityFallback', () => {
   it('sem atividade ainda: texto pelo status, nunca "Chegando…" para quem já está sentado', () => {
-    expect(activityFallback({ status: 'idle' })).toBe('Aguardando instruções');
-    expect(activityFallback({ status: 'working' })).toBe('Trabalhando…');
-    expect(activityFallback({ status: 'waiting', waitingFor: 'aprovar uma permissão' })).toBe('Precisa de você: aprovar uma permissão');
-    expect(activityFallback({ status: 'waiting' })).toBe('Precisa de você');
-    expect(activityFallback({ status: 'shell' })).toBe('Esperando o shell terminar');
-    expect(activityFallback({ status: 'done' })).toBe('Concluiu a tarefa');
-    expect(activityFallback({ status: 'offline' })).toBe('Saindo do escritório');
+    expect(activityFallback({ status: 'idle' })).toBe('De prontidão, aguardando ordens');
+    expect(activityFallback({ status: 'working' })).toBe('Em ação…');
+    expect(activityFallback({ status: 'waiting', waitingFor: 'aprovar uma permissão' })).toBe('Aguardando ordem: aprovar uma permissão');
+    expect(activityFallback({ status: 'waiting' })).toBe('Aguardando ordem');
+    expect(activityFallback({ status: 'shell' })).toBe('Segurando posição até o shell terminar');
+    expect(activityFallback({ status: 'done' })).toBe('Cumpriu o objetivo');
+    expect(activityFallback({ status: 'offline' })).toBe('Saindo do quartel-general');
   });
 });
 
@@ -251,7 +251,7 @@ describe('shellWait', () => {
     expect(displayStatus({ status: 'working', statusSince: 0, shells: [long] }, NOW)).toBe('shell');
     expect(displayStatus({ status: 'working', statusSince: 0, shells: [] }, NOW)).toBe('working');
     expect(displayStatus({ status: 'shell', statusSince: 0 }, NOW)).toBe('shell');
-    expect(statusLabel('shell')).toBe('Esperando o shell');
+    expect(statusLabel('shell')).toBe('Segurando posição');
   });
 });
 
@@ -288,7 +288,7 @@ describe('contagem e ordem com shells', () => {
   it('a busca encontra o agente pelo shell que ele espera', () => {
     const a = agent({ id: 'b', roomId: 'mega', status: 'shell', shells: [job({ id: 'b1', label: 'Rodar a suíte completa com phpunit' })] });
     expect(matchesQuery(a, shellRoom[0], undefined, 'phpunit')).toBe(true);
-    expect(matchesQuery(a, shellRoom[0], undefined, 'esperando shell')).toBe(true);
+    expect(matchesQuery(a, shellRoom[0], undefined, 'segurando posição')).toBe(true);
     expect(matchesQuery(agent({ id: 'x', roomId: 'mega', status: 'idle' }), shellRoom[0], undefined, 'shell')).toBe(false);
   });
 });
@@ -325,7 +325,7 @@ describe('textos da espera', () => {
     expect(two.text).toBe('⏳ Build · 1:02:00 (2 shells)');
   });
   it('shellLine sem comandos conhecidos usa um texto genérico', () => {
-    expect(shellLine({ jobs: [], since: NOW, foreground: false }, NOW).label).toBe('Esperando o shell terminar');
+    expect(shellLine({ jobs: [], since: NOW, foreground: false }, NOW).label).toBe('Segurando posição até o shell terminar');
     expect(shellLine({ jobs: [], since: NOW, foreground: true }, NOW).label).toBe('Esperando o comando terminar');
   });
   it('shellBoxText explica o que está acontecendo', () => {

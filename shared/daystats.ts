@@ -566,7 +566,7 @@ export function parseDayFile(raw: unknown, key: string): DayData | null {
       if (!agentId || !start || end < start) continue;
       const rec: WaitRecord = {
         agentId,
-        agentName: text(wo.agentName, LIMITS.name) ?? tr('Agente'),
+        agentName: text(wo.agentName, LIMITS.name) ?? tr('Operador'),
         roomId: text(wo.roomId) ?? '',
         account: text(wo.account) ?? '',
         start,

@@ -33,7 +33,7 @@ export class TermTabs {
   private dragging: string | null = null;
 
   constructor(private ctx: UiContext) {
-    this.el = h('div', { class: 'ui-ttabs', role: 'tablist', hidden: true, attrs: { 'aria-label': tr('Agentes do projeto (arraste para reordenar)') } });
+    this.el = h('div', { class: 'ui-ttabs', role: 'tablist', hidden: true, attrs: { 'aria-label': tr('Operadores do projeto (arraste para reordenar)') } });
     this.list = new KeyedList<AgentInfo>(this.el, {
       animate: false,
       key: (a) => a.id,

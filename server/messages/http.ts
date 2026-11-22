@@ -33,11 +33,11 @@ export function createMessageRoutes(registry: MessageRegistry): (req: IncomingMe
     if ('message' in r) return sendJson(res, 201, r.message);
     switch (r.error) {
       case 'not-found':
-        return sendJson(res, 404, { error: tr('agente desconhecido: ele já saiu do escritório?') });
+        return sendJson(res, 404, { error: tr('operador desconhecido: ele já saiu do quartel-general?') });
       case 'unavailable':
         return sendJson(res, 409, { error: r.reason });
       case 'too-many':
-        return sendJson(res, 429, { error: tr('já há {0} mensagens esperando a entrega para este agente: espere a sessão buscar', [MAX_OPEN]) });
+        return sendJson(res, 429, { error: tr('já há {0} mensagens esperando a entrega para este operador: espere a sessão buscar', [MAX_OPEN]) });
     }
   };
 
@@ -82,6 +82,6 @@ export function createMessageRoutes(registry: MessageRegistry): (req: IncomingMe
     }
     const msg = registry.get(id);
     if (msg) sendJson(res, 200, msg);
-    else sendJson(res, 404, { error: tr('mensagem desconhecida: ela já foi resolvida há mais de 10 min ou o Habblaud reiniciou') });
+    else sendJson(res, 404, { error: tr('mensagem desconhecida: ela já foi resolvida há mais de 10 min ou o Niko-Pixel reiniciou') });
   };
 }

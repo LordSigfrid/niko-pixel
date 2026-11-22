@@ -118,6 +118,44 @@ export function wallFaceTile(style: WallStyle, variant: number, col: number): Pi
       if (col % 2 === 1) b.vline(TILE - 1, fy, fy + fh - 1, 'rgba(120,126,138,0.35)');
       break;
     }
+    case 'cinder': {
+      // Blocos de concreto 16x8 (meia-junta), faixa de alerta amarela/preta na base.
+      const blk = ramp(base, 0.03);
+      const joint = shade(base, -0.14);
+      const band = 5;
+      for (let row = 0; row * 8 < fh - band; row++) {
+        const y = fy + row * 8;
+        const off = row % 2 ? 8 : 0;
+        b.hline(0, TILE - 1, Math.min(fy + fh - band - 1, y + 7), joint);
+        b.vline((off + 15) & 15, y, Math.min(fy + fh - band - 1, y + 6), joint);
+        b.hline(0, TILE - 1, y, shade(base, 0.04));
+        for (let k = 0; k < 3; k++) b.set(Math.floor(r() * TILE), y + 1 + Math.floor(r() * 5), r() < 0.5 ? blk.dk : blk.lt);
+      }
+      const hy = fy + fh - band;
+      for (let y = hy; y < fy + fh; y++) {
+        for (let x = 0; x < TILE; x++) b.set(x, y, ((x + y + col * TILE) >> 2) & 1 ? '#2a2a2a' : '#e3b23c');
+      }
+      b.hline(0, TILE - 1, hy, '#1e1e1e');
+      break;
+    }
+    case 'corrugated': {
+      // Chapa ondulada de contêiner: nervuras verticais de 4px, borda de solda e pontos de ferrugem.
+      const c = ramp(base, 0.05);
+      for (let x = 0; x < TILE; x++) {
+        const k = x & 3;
+        const tone = k === 0 ? c.hi : k === 1 ? c.lt : k === 2 ? c.base : c.dk;
+        b.vline(x, fy, fy + fh - 1, tone);
+      }
+      b.hline(0, TILE - 1, fy + 1, c.dd);
+      b.hline(0, TILE - 1, fy + fh - 2, c.dd);
+      for (let i = 0; i < 4; i++) {
+        const x = Math.floor(r() * TILE);
+        const y = fy + Math.floor(r() * fh);
+        b.set(x, y, r() < 0.5 ? '#8a5a36' : '#6e4529');
+        if (r() < 0.5) b.set(x, y + 1, '#8a5a36');
+      }
+      break;
+    }
     case 'plain':
       if (style.exterior) speckle(b, variant * 13 + col, 5, [shade(base, -0.03), shade(base, 0.03)]);
       break;
@@ -150,7 +188,7 @@ export function southWallTile(style: WallStyle, col: number): PixelBuf {
   const trim = style.trim ?? shade(style.base, -0.16);
   b.rect(0, TILE - 2, TILE, 2, trim);
   b.hline(0, TILE - 1, TILE - 2, shade(trim, 0.06));
-  if (style.pattern === 'brick' || style.exterior) {
+  if (style.pattern === 'brick' || style.pattern === 'cinder' || style.exterior) {
     for (let y = capH + 2; y < TILE - 2; y += 3) b.hline(0, TILE - 1, y, shade(face, -0.035));
   }
   if (col % 4 === 3) b.set(TILE - 1, capH + 1, shade(face, -0.03));

@@ -19,7 +19,10 @@ import { daylightModeOf, parseHourParam } from './daylight';
 import { RoomFxRenderer } from './github-fx';
 import { Lighting } from './lighting';
 import { Particles } from './particles';
-import { carSprite, propSprite, shadowSprite } from './props';
+import { TACTICAL_THEME } from '../../art/theme';
+import { h3 } from '../../art/surfaces/floor';
+import { carSprite, heliShadowSprite, heliSprite, propSprite, shadowSprite, vehicleSprite } from './props';
+import { CAMO_COUNT, HELI, pickVehicle, VEHICLE_FRAMES, VEHICLE_SPECS, type VehicleKind } from './war-art';
 import { countBadge, fallbackIcon } from './shell-sprites';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalCostume, seasonalFurniture } from './seasonal';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
@@ -46,6 +49,26 @@ interface Car {
   dir: 1 | -1;
   speed: number;
   variant: number;
+  /** 'car' = carrinho do visual clássico; os demais são os veículos do tema tático. */
+  kind: VehicleKind | 'car';
+  /** Distância percorrida (px), anima esteiras e rodas. */
+  odo: number;
+  /** Faróis/lanternas (ver LightScene.cars). */
+  front: number;
+  back: number;
+  ly: number;
+  lights: number;
+}
+
+/** Helicóptero atravessando o mapa (tema tático). `y` = chão sob ele; desenhado `alt` px acima. */
+interface Heli {
+  x: number;
+  y: number;
+  alt: number;
+  dir: 1 | -1;
+  speed: number;
+  variant: number;
+  phase: number;
 }
 
 /** Posição da cabeça (px de mundo) de cada personagem desenhado neste frame. */
@@ -91,6 +114,8 @@ export class Renderer {
   private builtAssetsVersion = 0;
   cars: Car[] = [];
   private nextCarAt = 0;
+  helis: Heli[] = [];
+  private nextHeliAt = -1;
   private ents: Ent[] = [];
   private pool: Ent[] = [];
   private date = new Date();
@@ -188,8 +213,11 @@ export class Renderer {
     paintShell(this.art, ctx, this.exterior.floors, []);
     // faixas da rua
     const ly = this.exterior.streetY + Math.round(this.exterior.streetH / 2) - 1;
-    ctx.fillStyle = 'rgba(255,236,170,0.75)';
-    for (let x = this.baseX + 4; x < this.baseX + c.width; x += 24) ctx.fillRect(x, ly, 12, 2);
+    if (TACTICAL_THEME) this.paintWornLane(ctx, ly, c.width);
+    else {
+      ctx.fillStyle = 'rgba(255,236,170,0.75)';
+      for (let x = this.baseX + 4; x < this.baseX + c.width; x += 24) ctx.fillRect(x, ly, 12, 2);
+    }
     this.shells = [];
     this.shellWindows = [];
     for (let col = CORE_COLS; col < cols; col++) {
@@ -421,7 +449,7 @@ export class Renderer {
         if (fs?.front) push(K.FurnFront, f.ay + 0.5, f, vis, s);
       }
     }
-    // os agentes e, na visita, o visitante
+    // os agentes
     for (const ch of this.sim.people()) {
       const head = this.headOf(ch);
       head.visible = false;
@@ -463,7 +491,7 @@ export class Renderer {
         push(K.Prop, prop.y, prop, null, alpha);
       }
     }
-    for (const car of this.cars) if (visible(car.x - 24, car.y - 24, 48, 28)) push(K.Car, car.y, car, null, 1);
+    for (const car of this.cars) if (visible(car.x - 32, car.y - 30, 64, 34)) push(K.Car, car.y, car, null, 1);
     ents.sort((a, b) => a.y - b.y || a.k - b.k);
 
     this.iconCount = 0;
@@ -493,6 +521,7 @@ export class Renderer {
     this.roomFx.emit(this.particles, this.sim, now, dt, view);
     this.particles.update(dt);
     this.particles.draw(ctx, vx0, vy0, vx1, vy1, now);
+    this.drawHelis(now, visible);
 
     // ---- luz: noite, salas apagadas, brilhos
     this.night = this.lighting.night;
@@ -707,22 +736,6 @@ export class Renderer {
       return { x: b.x + 3, y: b.y + 3, w: b.w - 6, h: b.h - 6 };
     })();
     return { x: o.x + r.x, y: o.y + r.y, w: r.w, h: r.h };
-  }
-
-  /**
-   * Retângulo (px de mundo) do quadro (`painting`) da parede de uma área, pintado junto com as paredes: a cena Visita
-   * põe o quadro de carimbos da portaria em cima do da recepção.
-   */
-  paintingRect(areaId: string): { x: number; y: number; w: number; h: number } | null {
-    const vis = this.areas.get(areaId);
-    const it = vis?.layout.wallItems.find((x) => x.kind === 'painting');
-    if (!vis || !it) return null;
-    const w = toWallVis(it, vis.id);
-    const s = wallSprites(this.art, 'painting', it.variant === 'wide' ? undefined : it.variant, 0, w.seed);
-    if (!s) return null;
-    const o = wallItemOrigin(w, s.base);
-    const b = opaqueBounds(s.base.canvas);
-    return { x: o.x + b.x, y: o.y + b.y, w: b.w, h: b.h };
   }
 
   /** Luminância média da área de texto da placa (para escolher a cor do texto). */
@@ -947,8 +960,6 @@ export class Renderer {
    * mesa ao lado).
    */
   private drawCobwebs(now: number): void {
-    // visita: nenhum tempo veio do mundo, então nada de teia
-    if (this.sim.visit) return;
     const { ctx } = this;
     for (const ch of this.sim.chars.values()) {
       if (ch.mode !== 'shell' || !ch.shellSince || ch.leaving || !ch.seated || ch.atSpot !== ch.homeSpot) continue;
@@ -1134,22 +1145,141 @@ export class Renderer {
     return c;
   }
 
+  /**
+   * Faixa central gasta (tema tático): tracejado desbotado com trechos apagados e lascados; a tinta
+   * some sobre buracos e rachaduras (pixels muito escuros do asfalto já pintado).
+   */
+  private paintWornLane(ctx: CanvasRenderingContext2D, ly: number, width: number): void {
+    const cy = ly - this.baseY;
+    let under: Uint8ClampedArray | null = null;
+    try {
+      under = ctx.getImageData(0, cy, width, 2).data;
+    } catch {
+      under = null;
+    }
+    for (let x = this.baseX + 4, i = 0; x < this.baseX + width; x += 24, i++) {
+      const h = h3(x, 1, 2, 77);
+      if (h % 100 < 28) continue;
+      const len = h % 100 < 45 ? 4 + ((h >>> 8) % 6) : 12;
+      const a = 0.32 + ((h >>> 12) % 20) / 100;
+      for (let dx = 0; dx < len; dx++) {
+        for (let dy = 0; dy < 2; dy++) {
+          const px = x + dx;
+          if (h3(px, ly + dy, 3, 77) % 5 === 0) continue;
+          if (under) {
+            const j = (dy * width + (px - this.baseX)) * 4;
+            const lum = under[j] * 0.3 + under[j + 1] * 0.59 + under[j + 2] * 0.11;
+            if (lum < 40) continue;
+          }
+          ctx.fillStyle = `rgba(226,210,152,${a})`;
+          ctx.fillRect(px, ly + dy, 1, 1);
+        }
+      }
+    }
+  }
+
   private drawCar(car: Car): void {
-    const s = carSprite(car.variant, car.dir < 0);
+    const flip = car.dir < 0;
+    const s = car.kind === 'car' ? carSprite(car.variant, flip) : vehicleSprite(car.kind, car.variant, Math.floor(car.odo / 2) % VEHICLE_FRAMES, flip);
     this.ctx.drawImage(s.canvas, Math.round(car.x - s.ax), Math.round(car.y - s.ay));
   }
 
   private updateCars(now: number, dt: number): void {
     const b = this.exterior.bounds;
-    const x0 = b.x * TILE - 40;
-    const x1 = (b.x + b.w) * TILE + 40;
+    const x0 = b.x * TILE - 60;
+    const x1 = (b.x + b.w) * TILE + 60;
+    const step = Math.min(dt, 0.1);
     if (now >= this.nextCarAt) {
       this.nextCarAt = now + 4000 + Math.random() * 9000;
       const lane = this.exterior.lanes[Math.floor(Math.random() * this.exterior.lanes.length)];
-      if (lane) this.cars.push({ x: lane.dir > 0 ? x0 : x1, y: lane.y, dir: lane.dir, speed: 38 + Math.random() * 30, variant: Math.floor(Math.random() * 6) });
+      const sx = lane && lane.dir > 0 ? x0 : x1;
+      // não nasce em cima de outro veículo da mesma faixa (tenta de novo logo)
+      if (lane && this.cars.some((c) => c.dir === lane.dir && Math.abs(c.x - sx) < 80)) this.nextCarAt = now + 1500;
+      else if (lane) {
+        if (TACTICAL_THEME) {
+          const kind = pickVehicle(Math.random());
+          const sp = VEHICLE_SPECS[kind];
+          this.cars.push({
+            x: sx,
+            y: lane.y,
+            dir: lane.dir,
+            kind,
+            speed: sp.speed[0] + Math.random() * (sp.speed[1] - sp.speed[0]),
+            variant: Math.floor(Math.random() * CAMO_COUNT),
+            odo: 0,
+            front: sp.front,
+            back: sp.back,
+            ly: sp.ly,
+            lights: sp.lights,
+          });
+        } else {
+          this.cars.push({ x: sx, y: lane.y, dir: lane.dir, kind: 'car', speed: 38 + Math.random() * 30, variant: Math.floor(Math.random() * 6), odo: 0, front: 16, back: 16, ly: 7, lights: 1 });
+        }
+      }
     }
-    for (const c of this.cars) c.x += c.dir * c.speed * Math.min(dt, 0.1);
+    for (const c of this.cars) {
+      // comboio: quem alcança o da frente na mesma faixa acompanha a velocidade dele
+      let v = c.speed;
+      for (const o of this.cars) {
+        if (o === c || o.dir !== c.dir) continue;
+        const gap = (o.x - c.x) * c.dir;
+        if (gap > 0 && gap < c.front + o.back + 14) v = Math.min(v, o.speed * 0.95);
+      }
+      c.x += c.dir * v * step;
+      c.odo += v * step;
+    }
     if (this.cars.length) this.cars = this.cars.filter((c) => c.x >= x0 - 10 && c.x <= x1 + 10);
+    if (TACTICAL_THEME) this.updateHelis(now, step);
+  }
+
+  /** De vez em quando um helicóptero cruza o mapa inteiro (também por cima dos prédios). */
+  private updateHelis(now: number, step: number): void {
+    const b = this.exterior.bounds;
+    const x0 = b.x * TILE - 120;
+    const x1 = (b.x + b.w) * TILE + 120;
+    if (this.nextHeliAt < 0) this.nextHeliAt = now + 12000 + Math.random() * 20000;
+    if (now >= this.nextHeliAt) {
+      this.nextHeliAt = now + 35000 + Math.random() * 55000;
+      const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+      const yTop = b.y * TILE + 80;
+      const yBot = (b.y + b.h) * TILE - 30;
+      this.helis.push({
+        x: dir > 0 ? x0 : x1,
+        y: yTop + Math.random() * (yBot - yTop),
+        alt: 46 + Math.random() * 18,
+        dir,
+        speed: HELI.speed[0] + Math.random() * (HELI.speed[1] - HELI.speed[0]),
+        variant: Math.floor(Math.random() * 2),
+        phase: Math.random() * 1000,
+      });
+    }
+    for (const h of this.helis) h.x += h.dir * h.speed * step;
+    if (this.helis.length) this.helis = this.helis.filter((h) => h.x >= x0 - 10 && h.x <= x1 + 10);
+  }
+
+  /** Helicópteros: sombra no chão (some à noite) e o aparelho no alto, por cima de tudo. */
+  private drawHelis(now: number, visible: (x: number, y: number, w: number, h: number) => boolean): void {
+    if (!this.helis.length) return;
+    const { ctx } = this;
+    const frame = Math.floor(now / 40) % VEHICLE_FRAMES;
+    for (const h of this.helis) {
+      const flip = h.dir < 0;
+      const top = this.heliTop(h, now);
+      if (visible(h.x - 50, h.y - 12, 100, 24)) {
+        const sh = heliShadowSprite(flip);
+        ctx.globalAlpha = 1 - 0.75 * this.lighting.night;
+        ctx.drawImage(sh.canvas, Math.round(h.x - sh.ax), Math.round(h.y - sh.ay));
+        ctx.globalAlpha = 1;
+      }
+      if (!visible(h.x - 50, top - 32, 100, 40)) continue;
+      const s = heliSprite(h.variant, frame, flip);
+      ctx.drawImage(s.canvas, Math.round(h.x - s.ax), Math.round(top - s.ay));
+    }
+  }
+
+  /** Posição desenhada do helicóptero (bob incluso) — usada pela iluminação. */
+  heliTop(h: { y: number; alt: number; phase: number }, now: number): number {
+    return h.y - h.alt + Math.sin((now + h.phase) / 520) * 1.5;
   }
 
   private drawPingPong(now: number): void {

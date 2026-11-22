@@ -1,4 +1,5 @@
 // Corredor que atravessa o prédio de oeste a leste, com bebedouros, bancos e plantas.
+import { TACTICAL_THEME } from '../../art/theme';
 import { COL_W, CORE_COLS, CORRIDOR_H, CORRIDOR_Y } from '../constants';
 import { AreaBuilder } from './builder';
 import type { AreaLayout } from './types';
@@ -13,7 +14,7 @@ const RUNNERS = ['#8b9bb0', '#8597ab', '#909fb3'] as const;
 export function layoutCorridor(cols: number): AreaLayout {
   const w = cols * COL_W;
   const b = new AreaBuilder(CORRIDOR_ID, 'corridor', { x: 0, y: CORRIDOR_Y, w, h: CORRIDOR_H });
-  b.floor('concrete', 0, 0, w, CORRIDOR_H, 501);
+  b.floor(TACTICAL_THEME ? 'bunker' : 'concrete', 0, 0, w, CORRIDOR_H, 501);
   // fachadas de vidro nas pontas do corredor (entrada principal a oeste)
   for (let ly = 0; ly < CORRIDOR_H; ly++) {
     b.furn('glass_partition', 0, ly, ly === 0 || ly === CORRIDOR_H - 1 ? 'end' : 'v', { order: 0.1 });

@@ -1,5 +1,5 @@
 // Simulador de escritório para demonstração e desenvolvimento.
-// Puro (sem Node/DOM): roda no servidor (HABBLAUD_DEMO=1) e no navegador (?mock=1).
+// Puro (sem Node/DOM): roda no servidor (NIKO_PIXEL_DEMO=1) e no navegador (?mock=1).
 //
 // Gera sessões fictícias com ciclos realistas: prompt -> trabalho -> (permissão ou pergunta, com pedido
 // fictício para responder pelo escritório) -> (subagentes)
@@ -148,7 +148,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { id: '.claude', short: 'C', name: 'Conta C', email: 'dev@empresa.example', organization: tr('Empresa'), plan: 'Max', color: '#f08a3c', configDir: '~/.claude' },
   { id: '.claude-conta2', short: 'D', name: 'Conta D', email: 'dev@pessoal.example', plan: 'Max', color: '#4aa8e8', configDir: '~/.claude-conta2' },
 ];
-/** Conta do Codex (um CODEX_HOME): sem e-mail (o Habblaud não lê credenciais), com o plano dos `rate_limits`. */
+/** Conta do Codex (um CODEX_HOME): sem e-mail (o Niko-Pixel não lê credenciais), com o plano dos `rate_limits`. */
 const DEMO_CODEX_ACCOUNT: DemoAccount = { id: '.codex', provider: 'codex', short: 'X', name: 'Codex', plan: 'Team', color: '#a77bf3', configDir: '~/.codex' };
 const MERGED_ACCOUNTS: Array<Pick<DemoAccount, 'short' | 'name' | 'color'>> = [
   { short: 'X', name: 'Demo X', color: '#5cc97b' },
@@ -306,7 +306,7 @@ export class DemoSimulator {
 
   /**
    * Mensagem mandada pelo escritório a um agente principal (fictícia: nada vai a uma sessão de verdade): a
-   * atividade "Mensagem pelo Habblaud" e, se ele estava à toa, o próximo turno começa logo, como se respondesse.
+   * atividade "Mensagem pelo Niko-Pixel" e, se ele estava à toa, o próximo turno começa logo, como se respondesse.
    * false = agente desconhecido, subagente ou que já saiu.
    */
   receiveMessage(agentId: string, text: string, now = Date.now()): boolean {
@@ -434,11 +434,11 @@ export class DemoSimulator {
       return true;
     }
     if (answers) {
-      this.activity(a, now, { kind: 'other', icon: '💬', text: tr('Respondido no Habblaud'), detail: answerSummary(p.questions ?? [], answers), tool: 'PermissionRequest' });
+      this.activity(a, now, { kind: 'other', icon: '💬', text: tr('Respondido no Niko-Pixel'), detail: answerSummary(p.questions ?? [], answers), tool: 'PermissionRequest' });
     } else if (d.behavior === 'allow') {
-      this.activity(a, now, { kind: 'other', icon: '✅', text: d.suggestion !== undefined ? tr('Aprovado no Habblaud (sempre permitir)') : tr('Aprovado no Habblaud'), detail: title, tool: 'PermissionRequest' });
+      this.activity(a, now, { kind: 'other', icon: '✅', text: d.suggestion !== undefined ? tr('Aprovado no Niko-Pixel (sempre permitir)') : tr('Aprovado no Niko-Pixel'), detail: title, tool: 'PermissionRequest' });
     } else {
-      this.activity(a, now, { kind: 'wait', icon: '🚫', text: tr('Recusado no Habblaud'), detail: d.message ? `${title} — ${d.message}` : title, tool: 'PermissionRequest' });
+      this.activity(a, now, { kind: 'wait', icon: '🚫', text: tr('Recusado no Niko-Pixel'), detail: d.message ? `${title} — ${d.message}` : title, tool: 'PermissionRequest' });
     }
     this.resumeFromWaiting(a, now);
     return true;
@@ -475,7 +475,7 @@ export class DemoSimulator {
     a.info.waitingFor = reason;
     this.setStatus(a, 'waiting', now);
     this.activity(a, now, SPECIAL.waiting(reason));
-    this.notice(now, 'alert', tr('✋ {0} precisa de você em {1}: {2}', [a.info.name, a.project.name, reason]), a.info.id, a.info.roomId);
+    this.notice(now, 'alert', tr('✋ {0} aguarda sua ordem em {1}: {2}', [a.info.name, a.project.name, reason]), a.info.id, a.info.roomId);
   }
 
   private resumeFromWaiting(a: SimAgent, now: number): void {
@@ -510,7 +510,7 @@ export class DemoSimulator {
     while (used.has(slot) || now - (this.slotFreedAt.get(slot) ?? -Infinity) < SLOT_COOLDOWN_MS) slot++;
     const room: RoomInfo = { id, name: project.name, path: `${ROOT}/${project.name}`, slot, seed: hash32(id), createdAt: now };
     this.rooms.set(id, room);
-    this.notice(now, 'info', tr('🏗️ Nova sala: {0}', [project.name]), undefined, id);
+    this.notice(now, 'info', tr('🏗️ Nova zona: {0}', [project.name]), undefined, id);
     this.dirty = true;
     return room;
   }
@@ -544,7 +544,7 @@ export class DemoSimulator {
       roomId: room.id,
       name: person.name,
       look: person.look,
-      role: tr('Agente principal'),
+      role: tr('Líder'),
       title: this.pick(project.prompts, rng),
       sessionId,
       account: codex ? this.codexAccount.id : claudeAccount,
@@ -638,7 +638,7 @@ export class DemoSimulator {
     this.agents.set(id, sub);
     parent.children.push(id);
     parent.info.stats.subagents++;
-    this.activity(sub, now, { kind: 'prompt', icon: '📨', text: tr('Nova tarefa: “{0}”', [desc]), detail: desc });
+    this.activity(sub, now, { kind: 'prompt', icon: '📨', text: tr('Novo objetivo: “{0}”', [desc]), detail: desc });
     this.dirty = true;
   }
 
@@ -768,7 +768,7 @@ export class DemoSimulator {
       this.setStatus(a, 'done', now);
       a.removeAt = now + DONE_GRACE_MS;
       const parent = a.info.parentId ? this.agents.get(a.info.parentId) : undefined;
-      this.notice(now, 'success', tr('📦 {0} entregou “{1}” para {2}', [a.info.name, a.info.title, parent?.info.name ?? tr('o agente')]), a.info.id, a.info.roomId);
+      this.notice(now, 'success', tr('📦 {0} entregou “{1}” para {2}', [a.info.name, a.info.title, parent?.info.name ?? tr('o operador')]), a.info.id, a.info.roomId);
       return;
     }
     if (now >= a.nextActionAt) {

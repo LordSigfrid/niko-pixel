@@ -94,7 +94,7 @@ export class PtyPanel implements UiComponent, PtyControl {
     this.el = h('section', { class: 'ui-term ui-pty', role: 'dialog', hidden: true, attrs: { 'aria-label': tr('Terminal') } }, bar, this.tabs.el, this.screen, this.away);
     // Teclas digitadas no terminal são do Claude Code, não dos atalhos do escritório.
     this.el.addEventListener('keydown', (e) => e.stopPropagation());
-    this.movable = new Movable(this.el, bar, { key: 'habblaud.move.term', enabled: () => !ctx.isNarrow(), onMove: () => this.pane?.refit(true) });
+    this.movable = new Movable(this.el, bar, { key: 'niko-pixel.move.term', enabled: () => !ctx.isNarrow(), onMove: () => this.pane?.refit(true) });
     this.el.addEventListener('keyup', (e) => e.stopPropagation());
   }
 
@@ -184,11 +184,11 @@ export class PtyPanel implements UiComponent, PtyControl {
     const own = this.ptyOf(id);
     if (own) return this.show(own);
     const agent = this.ctx.agent(id);
-    setText(this.nameEl, agent?.name ?? tr('Agente'));
+    setText(this.nameEl, agent?.name ?? tr('Operador'));
     if (agent) updateAccountChip(this.accEl, this.ctx.account(agent.account), agent.account);
     const room = agent ? this.ctx.store.room(agent.roomId) : undefined;
     setText(this.roomEl, room?.name ?? '');
-    setText(this.stateEl, agent ? tr('em outro terminal') : tr('saiu do escritório'));
+    setText(this.stateEl, agent ? tr('em outro terminal') : tr('saiu do quartel-general'));
     setText(this.awayTitle, agent?.title ?? '');
     setHidden(this.awayTitle, !agent?.title);
     this.actions.withTakeover = true;

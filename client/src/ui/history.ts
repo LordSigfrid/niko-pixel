@@ -8,6 +8,7 @@ import { access } from '../net/access';
 import type { RecentSession } from '../../../shared/types';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText, setTitle } from './dom';
+import { tacticalIcon } from './tactical-icons';
 import { calendarDayDiff, formatClock, formatDateTime, normalizeSearch, plural, shortPath } from './format';
 import { ICONS } from './icons';
 import { isCodex } from './provider';
@@ -138,7 +139,7 @@ export class HistoryPopover implements UiComponent {
     private ctx: UiContext,
     private terminal: Pick<TerminalControl, 'openSession'>,
   ) {
-    this.button = iconButton(ICONS.clock, tr('Histórico de sessões'), () => this.toggle(), 'ui-hist-btn');
+    this.button = iconButton(tacticalIcon('clock', ICONS.clock), tr('Relatório de missões'), () => this.toggle(), 'ui-hist-btn');
     setAttr(this.button, 'aria-haspopup', 'dialog');
     setAttr(this.button, 'aria-expanded', 'false');
 
@@ -147,7 +148,7 @@ export class HistoryPopover implements UiComponent {
     this.input = h('input', {
       class: 'ui-search__input',
       type: 'search',
-      attrs: { placeholder: tr('Buscar por título, projeto ou conta'), 'aria-label': tr('Buscar sessões por título, projeto ou conta'), autocomplete: 'off', spellcheck: 'false' },
+      attrs: { placeholder: tr('Buscar por título, projeto ou equipe'), 'aria-label': tr('Buscar sessões por título, projeto ou equipe'), autocomplete: 'off', spellcheck: 'false' },
     });
     this.input.addEventListener('input', () => {
       this.query = this.input.value;
@@ -177,12 +178,12 @@ export class HistoryPopover implements UiComponent {
     this.listEl.addEventListener('keydown', (e) => this.onListKey(e));
     this.footEl = h('p', { class: 'ui-hist__foot' });
 
-    const close = iconButton(ICONS.close, tr('Fechar histórico'), () => this.hide(), 'ui-icon-btn--sm');
+    const close = iconButton(ICONS.close, tr('Fechar relatório'), () => this.hide(), 'ui-icon-btn--sm');
     this.el = h(
       'div',
-      { class: 'ui-popover ui-hist', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Histórico de sessões'), id: 'ui-history', popover: 'auto' } },
-      h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Histórico de sessões') }), close),
-      h('p', { class: 'ui-hist__hint', text: tr('Últimos 7 dias, de todas as contas. Clique para ler a conversa no terminal.') }),
+      { class: 'ui-popover ui-hist', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Relatório de missões'), id: 'ui-history', popover: 'auto' } },
+      h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Relatório de missões') }), close),
+      h('p', { class: 'ui-hist__hint', text: tr('Últimos 7 dias, de todas as equipes. Clique para ler a conversa no terminal.') }),
       h('label', { class: 'ui-search ui-hist__search' }, searchIcon, this.input),
       this.stateEl,
       this.listEl,
@@ -244,8 +245,8 @@ export class HistoryPopover implements UiComponent {
     // aria-disabled (e não disabled): o botão continua focável e a dica do porquê aparece no hover.
     setAttr(this.button, 'aria-disabled', available ? null : 'true');
     this.button.classList.toggle('is-disabled', !available);
-    setTitle(this.button, available ? tr('Histórico de sessões (últimos 7 dias)') : TERMINAL_UNAVAILABLE_HINT);
-    setAttr(this.button, 'aria-label', available ? tr('Histórico de sessões') : tr('Histórico de sessões: {0}', [TERMINAL_UNAVAILABLE_HINT]));
+    setTitle(this.button, available ? tr('Relatório de missões (últimos 7 dias)') : TERMINAL_UNAVAILABLE_HINT);
+    setAttr(this.button, 'aria-label', available ? tr('Relatório de missões') : tr('Relatório de missões: {0}', [TERMINAL_UNAVAILABLE_HINT]));
     if (!this.isOpen) return;
     if (!available) return this.hide();
     this.renderList();
@@ -260,7 +261,7 @@ export class HistoryPopover implements UiComponent {
     try {
       const res = await fetch(HISTORY_URL, { headers: { Accept: 'application/json' } });
       if (!res.ok) {
-        this.error = res.status === 403 ? `${TERMINAL_UNAVAILABLE_HINT}.` : tr('Não foi possível carregar o histórico.');
+        this.error = res.status === 403 ? `${TERMINAL_UNAVAILABLE_HINT}.` : tr('Não foi possível carregar o relatório.');
         throw new Error(String(res.status));
       }
       const sessions = parseRecentSessions(await res.json());
@@ -282,7 +283,7 @@ export class HistoryPopover implements UiComponent {
     const q = this.query.trim();
     const loading = this.state === 'loading' || this.state === 'idle';
     let stateText = '';
-    if (this.state === 'error') stateText = this.error || tr('Não foi possível carregar o histórico.');
+    if (this.state === 'error') stateText = this.error || tr('Não foi possível carregar o relatório.');
     else if (loading) stateText = tr('Carregando as sessões…');
     else if (!this.sessions.length) stateText = tr('Nenhuma sessão nos últimos 7 dias.');
     else if (!shown.length) stateText = tr('Nenhuma sessão encontrada para “{0}”.', [q]);
@@ -331,7 +332,7 @@ export class HistoryPopover implements UiComponent {
     const when = s.firstAt !== undefined && calendarDayDiff(s.firstAt, s.lastAt) !== 0 ? `${formatDateTime(s.firstAt)} → ${formatDateTime(s.lastAt)}` : s.firstAt !== undefined ? `${formatDateTime(s.firstAt)} → ${formatClock(s.lastAt, false)}` : formatDateTime(s.lastAt);
     setTitle(
       btn,
-      [title, shortPath(s.project ?? s.projectDir), `${account?.name ?? s.account}${codex ? ' (Codex)' : ''} · ${when} · ${formatSize(s.size)}`, live ? tr('Ainda aberta: abre o terminal ao vivo do agente') : tr('Encerrada: abre a conversa no terminal')].join('\n'),
+      [title, shortPath(s.project ?? s.projectDir), `${account?.name ?? s.account}${codex ? ' (Codex)' : ''} · ${when} · ${formatSize(s.size)}`, live ? tr('Ainda aberta: abre o terminal ao vivo do operador') : tr('Encerrada: abre a conversa no terminal')].join('\n'),
     );
     setAttr(btn, 'aria-label', `${title}, ${project}, ${account?.name ?? s.account}${codex ? ', Codex' : ''}, ${live ? tr('aberta') : tr('última atividade {0} às {1}', [dayLabel(s.lastAt, now).toLowerCase(), formatClock(s.lastAt, false)])}`);
     btn.addEventListener('click', () => {

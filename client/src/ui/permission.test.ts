@@ -64,7 +64,7 @@ describe('responder pelo escritório (peças puras)', () => {
     // Claude Code: como antes.
     expect(permissionOptions({ suggestions }, { kind: 'main' })).toEqual({ always: true, interrupt: true, reasonRequired: false, seconds: false, note: '' });
     expect(permissionOptions({}, { kind: 'main' }).always).toBe(false);
-    expect(permissionOptions({}, { kind: 'sub', background: true }).note).toMatch(/^Este subagente roda em segundo plano/);
+    expect(permissionOptions({}, { kind: 'sub', background: true }).note).toMatch(/^Este reforço roda em segundo plano/);
   });
 
   it('destinationLabel', () => {
@@ -86,8 +86,8 @@ describe('responder pelo escritório (peças puras)', () => {
   });
 
   it('isLocalHostname: a mesma regra do servidor para aceitar respostas', () => {
-    for (const h of ['localhost', 'habblaud.localhost', '127.0.0.1', '127.1.2.3', '[::1]', '::1', 'LOCALHOST']) expect(isLocalHostname(h), h).toBe(true);
-    for (const h of ['192.168.0.10', 'meu-mac.local', 'habblaud.lan', '128.0.0.1', '127.0.0.1.nip.io']) expect(isLocalHostname(h), h).toBe(false);
+    for (const h of ['localhost', 'niko-pixel.localhost', '127.0.0.1', '127.1.2.3', '[::1]', '::1', 'LOCALHOST']) expect(isLocalHostname(h), h).toBe(true);
+    for (const h of ['192.168.0.10', 'meu-mac.local', 'niko-pixel.lan', '128.0.0.1', '127.0.0.1.nip.io']) expect(isLocalHostname(h), h).toBe(false);
   });
 });
 

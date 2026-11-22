@@ -1,4 +1,4 @@
-// Terminal interativo: o Habblaud abre o Claude Code num pseudo-terminal (node-pty) e o navegador mostra e
+// Terminal interativo: o Niko-Pixel abre o Claude Code num pseudo-terminal (node-pty) e o navegador mostra e
 // controla esse terminal (xterm.js). Saída via SSE em GET /api/pty/:id/stream; entrada, redimensionamento e
 // encerramento via POST (rotas em http/pty.ts).
 //
@@ -7,7 +7,7 @@
 // ou noutro terminal (só processos que o registro de sessões do Claude Code confirma como sessão e cujo início
 // e executável batem com o registro: pty/procinfo.ts).
 //
-// Segurança: quem controla um terminal destes executa comandos na máquina. O recurso é opt-in (HABBLAUD_PTY=1),
+// Segurança: quem controla um terminal destes executa comandos na máquina. O recurso é opt-in (NIKO_PIXEL_PTY=1),
 // as rotas só aceitam conexões do próprio computador (ver http/pty.ts) e ele fica desligado no Docker.
 import { chmodSync, readFileSync, statSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -107,7 +107,7 @@ const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const MAIN_ID = /^(.+):(\d+)$/;
 
 /**
- * Variáveis que o Claude Code põe no ambiente das próprias ferramentas. Se o Habblaud foi iniciado de dentro
+ * Variáveis que o Claude Code põe no ambiente das próprias ferramentas. Se o Niko-Pixel foi iniciado de dentro
  * de uma sessão, o Claude aberto aqui se acharia uma sessão-filha (e desligaria o transcript).
  */
 const INHERITED_SESSION_VARS = [
@@ -243,7 +243,7 @@ export class PtyManager {
     } catch (err) {
       throw new PtyError(500, tr('não consegui encerrar a sessão: {0}', [errMsg(err)]));
     }
-    log.info(tr('Agente {0} encerrado pelo escritório.', [agentId]));
+    log.info(tr('Operador {0} encerrado pelo quartel-general.', [agentId]));
   }
 
   /**
@@ -278,7 +278,7 @@ export class PtyManager {
     }
     if (!(await this.waitExit(ext.pid, TAKEOVER_WAIT_MS))) {
       // Não saiu a tempo: encerra à força (se ainda for o mesmo processo) e espera mais um pouco.
-      log.warn(tr('Agente {0} não encerrou em {1} s: encerrando à força.', [agentId, TAKEOVER_WAIT_MS / 1000]));
+      log.warn(tr('Operador {0} não encerrou em {1} s: encerrando à força.', [agentId, TAKEOVER_WAIT_MS / 1000]));
       try {
         if (await this.stillSame(ext.pid, ext.proc)) this.forceKill(ext.pid);
       } catch (err) {
@@ -295,7 +295,7 @@ export class PtyManager {
       // A sessão de lá já foi encerrada: dizer como continuar a conversa.
       throw new PtyError(500, tr('a sessão foi encerrada no outro terminal, mas não abriu aqui ({0}); para continuar: claude --resume {1}', [errMsg(err), agent.sessionId]));
     }
-    log.info(tr('Agente {0} assumido pelo escritório (sessão {1}).', [agentId, agent.sessionId]));
+    log.info(tr('Operador {0} assumido pelo quartel-general (sessão {1}).', [agentId, agent.sessionId]));
     return info;
   }
 
@@ -374,7 +374,7 @@ export class PtyManager {
     if (!this.opts.spawn) throw new PtyError(503, tr('terminal desligado: {0}', [this.opts.disabledReason ?? tr('indisponível')]));
     // Antes de tudo (o "assumir" encerra a sessão de lá depois daqui): um claude que não roda abriria um terminal que
     // sai na hora.
-    if (!isExecutableFile(this.opts.claudeBin)) throw new PtyError(503, tr('o executável do Claude Code não roda: {0} (confira o HABBLAUD_CLAUDE_BIN)', [this.opts.claudeBin]));
+    if (!isExecutableFile(this.opts.claudeBin)) throw new PtyError(503, tr('o executável do Claude Code não roda: {0} (confira o NIKO_PIXEL_CLAUDE_BIN)', [this.opts.claudeBin]));
     if (typeof p.cwd !== 'string' || !isAbsolute(p.cwd)) throw new PtyError(400, tr('informe a pasta do projeto (caminho absoluto)'));
     const cwd = resolve(p.cwd);
     let isDir = false;
@@ -386,7 +386,7 @@ export class PtyManager {
     if (!isDir) throw new PtyError(400, tr('pasta não encontrada: {0}', [cwd]));
     const accounts = this.opts.accounts();
     const account = typeof p.account === 'string' ? accounts.find((a) => a.id === p.account) : (accounts.find((a) => a.isDefault) ?? accounts[0]);
-    if (!account) throw new PtyError(400, tr('conta desconhecida'));
+    if (!account) throw new PtyError(400, tr('equipe desconhecida'));
     const running = [...this.ptys.values()].filter((t) => t.info.exitedAt === undefined).length;
     if (running + Math.max(0, reserved) >= MAX_PTYS) throw new PtyError(429, tr('limite de {0} terminais abertos', [MAX_PTYS]));
     return { cwd, account, cols: clampInt(p.cols, 20, 400, 100), rows: clampInt(p.rows, 5, 200, 30) };
@@ -425,7 +425,7 @@ export class PtyManager {
       this.broadcast(pty, 'exit', { code: exitCode });
       this.opts.onChange();
     });
-    log.info(p.resume ? tr('Terminal {0} aberto em {1} (conta {2}, retomando {3}).', [id, cwd, account.id, p.resume]) : tr('Terminal {0} aberto em {1} (conta {2}).', [id, cwd, account.id]));
+    log.info(p.resume ? tr('Terminal {0} aberto em {1} (equipe {2}, retomando {3}).', [id, cwd, account.id, p.resume]) : tr('Terminal {0} aberto em {1} (equipe {2}).', [id, cwd, account.id]));
     this.opts.onChange();
     return { ...info };
   }
@@ -437,22 +437,22 @@ export class PtyManager {
 
   private mainAgent(agentId: string): PtyAgentRef {
     const agent = this.opts.agent(agentId);
-    if (!agent) throw new PtyError(404, tr('agente não encontrado'));
-    if (agent.kind !== 'main') throw new PtyError(400, tr('só dá para encerrar ou assumir o agente principal de uma sessão'));
+    if (!agent) throw new PtyError(404, tr('operador não encontrado'));
+    if (agent.kind !== 'main') throw new PtyError(400, tr('só dá para encerrar ou assumir o líder de uma sessão'));
     return agent;
   }
 
   /**
-   * Agente principal aberto fora do Habblaud, confirmado pelo registro de sessões da conta (mesma sessão) e pelo
+   * Agente principal aberto fora do Niko-Pixel, confirmado pelo registro de sessões da conta (mesma sessão) e pelo
    * sistema (o processo com esse PID começou quando o registro diz e é o Claude Code).
    */
   private async external(agentId: string): Promise<ExternalProc> {
     const agent = this.mainAgent(agentId);
     const m = MAIN_ID.exec(agent.id);
     const pid = m ? Number(m[2]) : NaN;
-    if (!m || m[1] !== agent.account || !Number.isSafeInteger(pid) || pid <= 0) throw new PtyError(400, tr('agente sem processo conhecido'));
+    if (!m || m[1] !== agent.account || !Number.isSafeInteger(pid) || pid <= 0) throw new PtyError(400, tr('operador sem processo conhecido'));
     const account = this.opts.accounts().find((a) => a.id === agent.account);
-    if (!account) throw new PtyError(400, tr('conta desconhecida'));
+    if (!account) throw new PtyError(400, tr('equipe desconhecida'));
     let registered: unknown;
     try {
       registered = this.readSession(account.dir, pid);

@@ -5,7 +5,6 @@
 // Renomear/remover campos quebra servidor, mundo e UI ao mesmo tempo.
 
 import type { AppearanceParts } from './appearance';
-import type { WorldMeta } from './world/api';
 
 export type AgentKind = 'main' | 'sub';
 
@@ -13,9 +12,13 @@ export type AgentKind = 'main' | 'sub';
  * De qual ferramenta vem o agente (ou a conta, a fonte, a sessão, o pedido). Nos tipos do protocolo o campo
  * `provider` é opcional e AUSENTE quer dizer 'claude' (tudo o que existia antes do Codex continua igual).
  * - claude: Claude Code;
- * - codex: OpenAI Codex (CLI `codex` e o app desktop, que gravam no mesmo CODEX_HOME).
+ * - codex: OpenAI Codex (CLI `codex` e o app desktop, que gravam no mesmo CODEX_HOME);
+ * - opencode: OpenCode (sst/opencode), multi-provedor (o modelo de cada agente diz qual: DeepSeek, Gemini...);
+ * - gemini: Gemini CLI (~/.gemini);
+ * - qwen: Qwen Code (~/.qwen, derivado do Gemini CLI).
+ * As três últimas são só leitura dos arquivos locais (server/sources/polled.ts): sem terminal, mensagens nem aprovações.
  */
-export type Provider = 'claude' | 'codex';
+export type Provider = 'claude' | 'codex' | 'opencode' | 'gemini' | 'qwen';
 
 /**
  * Estado de alto nível de um agente — é o que dirige o comportamento do personagem.
@@ -177,12 +180,12 @@ export interface AgentInfo {
   /** Subagente rodando em segundo plano. */
   background?: boolean;
   /**
-   * Pedido de permissão que dá para responder pelo Habblaud (hook PermissionRequest; o mais antigo, se
+   * Pedido de permissão que dá para responder pelo Niko-Pixel (hook PermissionRequest; o mais antigo, se
    * houver vários). Enquanto existe, o agente aparece como 'waiting'. Ver PermissionRequestInfo.
    */
   permission?: PermissionRequestInfo;
   /**
-   * Dá para mandar mensagem a este agente pelo Habblaud (só principais): a sessão tem o plugin habblaud-mensagens
+   * Dá para mandar mensagem a este agente pelo Niko-Pixel (só principais): a sessão tem o plugin niko-pixel-mensagens
    * e perguntou pela caixa de entrada há pouco. Ver POST /api/messages.
    */
   canMessage?: boolean;
@@ -232,7 +235,7 @@ export interface RoomEffect {
  */
 export interface UpdateStatus {
   /**
-   * - off: verificação desligada (HABBLAUD_UPDATE_CHECK=0 ou package.json sem repositório no GitHub);
+   * - off: verificação desligada (NIKO_PIXEL_UPDATE_CHECK=0 ou package.json sem repositório no GitHub);
    * - pending: ainda não verificou;
    * - ok: verificou (com ou sem release publicada);
    * - error: a última tentativa falhou (sem internet, limite de consultas do GitHub...).
@@ -283,13 +286,13 @@ export interface AccountUsage {
   sevenDaySonnet?: UsageWindow;
   /**
    * Origem dos números (todas são arquivos locais gravados pela própria ferramenta):
-   * - 'statusline': capturado ao vivo e gravado em ~/.habblaud/usage/<conta>.json pelo mod do Habblaud
-   *   (mod/habblaud, recomendado) ou pelo scripts/statusline-tap.mjs (campo rate_limits do statusline);
+   * - 'statusline': capturado ao vivo e gravado em ~/.niko-pixel/usage/<conta>.json pelo mod do Niko-Pixel
+   *   (mod/niko-pixel, recomendado) ou pelo scripts/statusline-tap.mjs (campo rate_limits do statusline);
    * - 'cache': `cachedUsageUtilization` gravado pelo próprio Claude Code (atualiza quando alguém roda /usage);
    * - 'codex': `rate_limits` dos arquivos de sessão do Codex (só se renovam enquanto alguma sessão roda).
    */
   source: 'cache' | 'statusline' | 'codex';
-  /** Quem gravou o arquivo ao vivo ('statusline'): o mod do Habblaud no Claude Code ou o tap de statusline. */
+  /** Quem gravou o arquivo ao vivo ('statusline'): o mod do Niko-Pixel no Claude Code ou o tap de statusline. */
   via?: 'mod' | 'tap';
   /**
    * Conta sem cota nem créditos para usar agora (Codex: `rate_limits.primary` nulo, ex.: créditos do workspace
@@ -334,7 +337,7 @@ export interface OfficeSnapshot {
   serverTime: number;
   rooms: RoomInfo[];
   agents: AgentInfo[];
-  /** Terminais interativos abertos pelo Habblaud (Claude Code rodando dentro do navegador). */
+  /** Terminais interativos abertos pelo Niko-Pixel (Claude Code rodando dentro do navegador). */
   ptys?: PtyInfo[];
   /** Contas do Claude detectadas (com uso de 5h/semanal quando disponível). */
   accounts: AccountInfo[];
@@ -349,12 +352,12 @@ export interface OfficeSnapshot {
      */
     build?: string;
     /**
-     * Terminal (GET /api/agents/:id/terminal) disponível: só quando o Habblaud não fica
+     * Terminal (GET /api/agents/:id/terminal) disponível: só quando o Niko-Pixel não fica
      * exposto além do próprio computador (bind local). Ausente/false = recurso desligado.
      */
     terminal?: boolean;
     /**
-     * Mensagens pelo escritório ligadas (POST /api/messages): a mesma trava do terminal e HABBLAUD_MENSAGENS sem
+     * Mensagens pelo escritório ligadas (POST /api/messages): a mesma trava do terminal e NIKO_PIXEL_MENSAGENS sem
      * desligar. Quem recebe agora diz AgentInfo.canMessage. Ausente/false = recurso desligado.
      */
     messages?: boolean;
@@ -365,22 +368,12 @@ export interface OfficeSnapshot {
     pty?: PtyStatus;
     /** Verificação de versão nova no GitHub (ausente nos testes e no timelapse). */
     updates?: UpdateStatus;
-    /**
-     * Habblaud World (server/world/): `enabled` = a seção aparece (HABBLAUD_WORLD não é 0 e o servidor do mundo foi
-     * aceito: o padrão, server.habblaud.com, ou uma HABBLAUD_WORLD_URL válida; recusada, o recurso fica desligado e nada
-     * do World aparece); `configured` = servidor do mundo aceito; `state` = a
-     * conta neste computador; `building` (aditivo, só com a conta aprovada e o personagem criado) = o resumo do prédio
-     * no mundo: conectado, pausado, andares e agentes da última remessa e a hora dela, se saiu do mundo e se o servidor
-     * do mundo o parou (sem o motivo, que só vai no status). Nada da conta além disso (o snapshot também vai ao celular
-     * e à linha do tempo). Ausente nos testes e no timelapse.
-     */
-    world?: WorldMeta;
   };
 }
 
 /**
  * O que ESTA página pode fazer (GET /api/access): a porta local libera tudo pelo Host local; a porta remota com login
- * (server/http/remote.ts) só o que HABBLAUD_REMOTE_ALLOW liberar. `local` = aberta pelo próprio computador (editar
+ * (server/http/remote.ts) só o que NIKO_PIXEL_REMOTE_ALLOW liberar. `local` = aberta pelo próprio computador (editar
  * personagem e renomear salas, que nunca valem pela porta remota).
  */
 export interface AccessInfo {
@@ -391,11 +384,6 @@ export interface AccessInfo {
   terminal: boolean;
   /** Pode abrir agentes novos no app do Claude (POST /api/spawn). */
   spawn: boolean;
-  /**
-   * Pode usar a conta do Habblaud World (/api/world/*): recurso ligado (HABBLAUD_WORLD), trava do terminal e porta local
-   * com Host local. Ausente em servidores antigos.
-   */
-  world?: boolean;
 }
 
 export interface FeedItem {
@@ -440,13 +428,13 @@ export interface AgentDetail {
 // ------------------------------------------------------------------ mod do Claude Code
 
 /**
- * Resposta de GET /api/mod/summary: o mínimo que o mod do Claude Code (mod/habblaud) precisa para a linha
- * "precisa de você" embaixo do prompt e para o comando /habblaud. Só agentes reais (o demo fica de fora)
+ * Resposta de GET /api/mod/summary: o mínimo que o mod do Claude Code (mod/niko-pixel) precisa para a linha
+ * "precisa de você" embaixo do prompt e para o comando /niko-pixel. Só agentes reais (o demo fica de fora)
  * e presentes (sem quem já encerrou ou entregou); com `?session=` (e `?account=`), sem a própria sessão
  * de quem pergunta: o agente principal dela e os subagentes.
  */
 export interface ModSummary {
-  /** Versão do Habblaud em uso. */
+  /** Versão do Niko-Pixel em uso. */
   version: string;
   /** Agentes presentes e quantos estão trabalhando. */
   agents: number;
@@ -620,9 +608,9 @@ export interface PermissionSuggestionInfo {
 }
 
 /**
- * Pedido de permissão pendente que dá para responder pelo Habblaud: o hook PermissionRequest do Claude Code
- * (mod/habblaud-permissoes/hooks/permission-hook.mjs) o registra e fica esperando a decisão. Só existe com bind local (a mesma
- * trava do terminal) e com alguma página do Habblaud aberta.
+ * Pedido de permissão pendente que dá para responder pelo Niko-Pixel: o hook PermissionRequest do Claude Code
+ * (mod/niko-pixel-permissoes/hooks/permission-hook.mjs) o registra e fica esperando a decisão. Só existe com bind local (a mesma
+ * trava do terminal) e com alguma página do Niko-Pixel aberta.
  * No snapshot vai sem `input` (os argumentos completos só saem por GET /api/permissions/:id, com acesso
  * local); os pedidos fictícios do demo já vêm com ele.
  */
@@ -640,7 +628,7 @@ export interface PermissionRequestInfo {
   /** Argumentos (comando, diff, JSON...), mascarados e truncados. */
   input?: string;
   inputKind?: TerminalInputKind;
-  /** Pedido de um subagente que o Habblaud ainda não mostra: o tipo dele (ex.: "Explore"). */
+  /** Pedido de um subagente que o Niko-Pixel ainda não mostra: o tipo dele (ex.: "Explore"). */
   subagent?: string;
   /** Regras "sempre permitir" que podem ser aplicadas junto com a aprovação. */
   suggestions?: PermissionSuggestionInfo[];
@@ -713,7 +701,7 @@ export interface PtyStatus {
   reason?: string;
 }
 
-/** Terminal interativo aberto pelo Habblaud (node-pty no servidor, xterm.js no navegador). */
+/** Terminal interativo aberto pelo Niko-Pixel (node-pty no servidor, xterm.js no navegador). */
 export interface PtyInfo {
   id: string;
   /** PID do Claude Code: o agente correspondente é `${account}:${pid}` (= agentId). */
@@ -730,7 +718,7 @@ export interface PtyInfo {
   exitCode?: number;
 }
 
-/** Mensagem entregue ao plugin habblaud-mensagens (POST /api/mod/inbox). */
+/** Mensagem entregue ao plugin niko-pixel-mensagens (POST /api/mod/inbox). */
 export interface InboxMessage {
   id: string;
   /** O texto como foi digitado: o plugin o manda à sessão como se você o tivesse digitado. */

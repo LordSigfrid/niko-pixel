@@ -71,7 +71,7 @@ describe('detecção de contas', () => {
     const extra = join(home, 'outra');
     mkdirSync(extra);
     expect(discoverClaudeDirs({ CLAUDE_CONFIG_DIR: extra }, home)).toContain(extra);
-    expect(discoverClaudeDirs({ HABBLAUD_CLAUDE_DIRS: ' /x/a , ~/b ' }, home)).toEqual([resolve('/x/a'), join(home, 'b')]);
+    expect(discoverClaudeDirs({ NIKO_PIXEL_CLAUDE_DIRS: ' /x/a , ~/b ' }, home)).toEqual([resolve('/x/a'), join(home, 'b')]);
   });
 
   it('pasta do Codex (CODEX_HOME) não vira conta do Claude Code, por nenhum caminho', () => {
@@ -105,12 +105,12 @@ describe('detecção de contas', () => {
 
     expect(discoverClaudeDirs({}, home)).toEqual([join(home, '.claude'), join(home, '.claude-conta2'), misto]);
     expect(codexDirsRefused({}, home)).toEqual([disfarcado]);
-    // CLAUDE_CONFIG_DIR e HABBLAUD_CLAUDE_DIRS apontando para o Codex: fora (o resto da lista segue igual).
+    // CLAUDE_CONFIG_DIR e NIKO_PIXEL_CLAUDE_DIRS apontando para o Codex: fora (o resto da lista segue igual).
     expect(discoverClaudeDirs({ CLAUDE_CONFIG_DIR: codex }, home)).not.toContain(codex);
     expect(codexDirsRefused({ CLAUDE_CONFIG_DIR: codex }, home)).toEqual([disfarcado, codex]);
-    expect(discoverClaudeDirs({ HABBLAUD_CLAUDE_DIRS: `~/.claude,~/.codex,/x/a` }, home)).toEqual([join(home, '.claude'), resolve('/x/a')]);
-    expect(codexDirsRefused({ HABBLAUD_CLAUDE_DIRS: `~/.claude,~/.codex,/x/a` }, home)).toEqual([codex]);
-    const env = { HABBLAUD_ACCOUNTS: JSON.stringify([{ id: '.codex', mountDir: codex }]) };
+    expect(discoverClaudeDirs({ NIKO_PIXEL_CLAUDE_DIRS: `~/.claude,~/.codex,/x/a` }, home)).toEqual([join(home, '.claude'), resolve('/x/a')]);
+    expect(codexDirsRefused({ NIKO_PIXEL_CLAUDE_DIRS: `~/.claude,~/.codex,/x/a` }, home)).toEqual([codex]);
+    const env = { NIKO_PIXEL_ACCOUNTS: JSON.stringify([{ id: '.codex', mountDir: codex }]) };
     expect(discoverClaudeDirs(env, home)).not.toContain(codex);
   });
 
@@ -131,30 +131,30 @@ describe('detecção de contas', () => {
     );
     const accs = detectAccounts([join(home, '.claude'), join(home, '.claude-conta2'), join(home, '.claude-vazio')], { home, env: {} });
     expect(accs).toEqual([
-      { id: '.claude', configDir: join(home, '.claude'), short: 'C', name: 'Conta C', color: '#f08a3c', email: 'a@empresa.com', organization: 'Empresa' },
+      { id: '.claude', configDir: join(home, '.claude'), short: 'C', name: 'Equipe C', color: '#f08a3c', email: 'a@empresa.com', organization: 'Empresa' },
       {
         id: '.claude-conta2',
         configDir: join(home, '.claude-conta2'),
         short: 'D',
-        name: 'Conta D',
+        name: 'Equipe D',
         color: '#4aa8e8',
         email: 'b@pessoal.com',
         cachedUsage: { fetchedAtMs: 1000, utilization: { five_hour: { utilization: 10, resets_at: null } } },
       },
-      { id: '.claude-vazio', configDir: join(home, '.claude-vazio'), short: 'A', name: 'Conta A', color: '#5cc97b' },
+      { id: '.claude-vazio', configDir: join(home, '.claude-vazio'), short: 'A', name: 'Equipe A', color: '#5cc97b' },
     ]);
     expect(JSON.stringify(accs)).not.toContain('nao-pode-vazar');
   });
 
-  it('HABBLAUD_ACCOUNTS (Docker) sobrepõe metadados casando por id ou mountDir', () => {
+  it('NIKO_PIXEL_ACCOUNTS (Docker) sobrepõe metadados casando por id ou mountDir', () => {
     const env = {
-      HABBLAUD_ACCOUNTS: JSON.stringify([
+      NIKO_PIXEL_ACCOUNTS: JSON.stringify([
         { id: '.claude', configDir: '/Users/x/.claude', mountDir: join(home, '.claude'), short: 'C', email: 'host@x.com', plan: 'Max', color: '#000000' },
         { mountDir: join(home, '.claude-conta2'), configDir: '/Users/x/.claude-conta2', short: 'D', name: 'Pessoal', cachedUsage: { fetchedAtMs: 5 } },
       ]),
     };
     const accs = detectAccounts([join(home, '.claude'), join(home, '.claude-conta2')], { home: '/nenhum', env });
-    expect(accs[0]).toMatchObject({ id: '.claude', configDir: '/Users/x/.claude', short: 'C', name: 'Conta C', email: 'host@x.com', plan: 'Max', color: '#000000' });
+    expect(accs[0]).toMatchObject({ id: '.claude', configDir: '/Users/x/.claude', short: 'C', name: 'Equipe C', email: 'host@x.com', plan: 'Max', color: '#000000' });
     expect(accs[1]).toMatchObject({ id: '.claude-conta2', configDir: '/Users/x/.claude-conta2', short: 'D', name: 'Pessoal', cachedUsage: { fetchedAtMs: 5 } });
   });
 });

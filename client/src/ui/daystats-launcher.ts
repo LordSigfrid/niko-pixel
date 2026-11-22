@@ -4,6 +4,7 @@
 import type { UiComponent, UiContext } from './context';
 import type { DayPanel } from './daystats';
 import { iconButton } from './dom';
+import { tacticalIcon } from './tactical-icons';
 import { tr } from '../../../shared/i18n';
 
 /** Colunas de um gráfico em pixels (o mesmo traço dos outros ícones da barra). */
@@ -21,7 +22,7 @@ export class DayLauncher implements UiComponent {
     private readonly ctx: UiContext,
     private readonly mount: (el: HTMLElement) => void,
   ) {
-    this.button = iconButton(DAY_ICON, tr('Meu dia: para onde foi o tempo (M)'), () => this.toggle());
+    this.button = iconButton(tacticalIcon('day', DAY_ICON), tr('Meu dia: para onde foi o tempo (M)'), () => this.toggle());
     this.button.setAttribute('aria-haspopup', 'dialog');
     if (ctx.store.mock) void this.load();
   }

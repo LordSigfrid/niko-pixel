@@ -242,7 +242,7 @@ class AgentView {
   private actTime: HTMLElement;
   private actDetails: HTMLDetailsElement;
   private actDetail: HTMLElement;
-  /** Mandar mensagem ao agente principal pelo Habblaud (plugin habblaud-mensagens). */
+  /** Mandar mensagem ao agente principal pelo Niko-Pixel (plugin niko-pixel-mensagens). */
   private composer: MessageComposer;
   private msgSec: ReturnType<typeof section>;
   private tasksSec: ReturnType<typeof section>;
@@ -286,17 +286,17 @@ class AgentView {
       { class: 'ui-hero__text' },
       h('div', { class: 'ui-hero__line' }, this.name, this.character.button, this.role),
       h('div', { class: 'ui-hero__acc' }, this.accChip, this.accName, this.accProv, this.accEmail),
-      h('div', { class: 'ui-hero__where' }, h('span', { class: 'ui-muted', text: tr('Sala') }), this.roomBtn),
+      h('div', { class: 'ui-hero__where' }, h('span', { class: 'ui-muted', text: tr('Zona') }), this.roomBtn),
     );
-    this.gone = h('p', { class: 'ui-gone', text: tr('Este agente já saiu do escritório.'), hidden: true });
+    this.gone = h('p', { class: 'ui-gone', text: tr('Este operador já saiu do quartel-general.'), hidden: true });
 
     this.dot = createStatusDot();
     this.statusText = h('span', { class: 'ui-status__text' });
     this.statusSince = h('span', { class: 'ui-status__since' });
-    this.followBtn = h('button', { class: 'ui-btn', type: 'button', attrs: { 'aria-pressed': 'false' }, title: tr('Câmera acompanha o agente (F)'), on: { click: () => this.toggleFollow() } });
+    this.followBtn = h('button', { class: 'ui-btn', type: 'button', attrs: { 'aria-pressed': 'false' }, title: tr('Câmera acompanha o operador (F)'), on: { click: () => this.toggleFollow() } });
     this.followBtn.innerHTML = ICONS.follow;
     this.followBtn.append(h('span', { text: tr('Seguir') }));
-    const centerBtn = h('button', { class: 'ui-btn', type: 'button', title: tr('Levar a câmera até o agente'), on: { click: () => ctx.focusSelection() } });
+    const centerBtn = h('button', { class: 'ui-btn', type: 'button', title: tr('Levar a câmera até o operador'), on: { click: () => ctx.focusSelection() } });
     centerBtn.innerHTML = ICONS.center;
     centerBtn.append(h('span', { text: tr('Centralizar') }));
     const statusRow = h(
@@ -323,14 +323,14 @@ class AgentView {
 
     this.alertText = h('p', { class: 'ui-alert__text' });
     this.alertQuestions = h('div', { class: 'ui-ask', hidden: true });
-    this.alertAnswerHint = h('p', { class: 'ui-ask__answer-hint', hidden: true, text: tr('Com o plugin habblaud-permissoes (npm run mod:install), dá para responder as perguntas por aqui.') });
+    this.alertAnswerHint = h('p', { class: 'ui-ask__answer-hint', hidden: true, text: tr('Com o plugin niko-pixel-permissoes (npm run mod:install), dá para responder as perguntas por aqui.') });
     const alertIcon = h('span', { class: 'ui-alert__icon', attrs: { 'aria-hidden': 'true' } });
     alertIcon.innerHTML = ICONS.hand;
     this.alert = h(
       'div',
       { class: 'ui-alert', role: 'alert', hidden: true },
       alertIcon,
-      h('div', {}, h('strong', { class: 'ui-alert__title', text: tr('Precisa de você') }), this.alertText, this.alertQuestions, this.alertAnswerHint),
+      h('div', {}, h('strong', { class: 'ui-alert__title', text: tr('Aguardando ordem') }), this.alertText, this.alertQuestions, this.alertAnswerHint),
     );
 
     // Esperando o shell: caixa de status (com a fase da espera no escritório) e a lista de comandos rodando.
@@ -343,7 +343,7 @@ class AgentView {
       'div',
       { class: 'ui-alert ui-alert--shell', hidden: true },
       shellIcon,
-      h('div', {}, h('strong', { class: 'ui-alert__title', text: tr('Esperando o shell') }), this.shellText, h('p', { class: 'ui-shell-mood' }, this.shellMood, this.shellNext)),
+      h('div', {}, h('strong', { class: 'ui-alert__title', text: tr('Segurando posição') }), this.shellText, h('p', { class: 'ui-shell-mood' }, this.shellMood, this.shellNext)),
     );
     const shellList = h('ul', { class: 'ui-shells' });
     this.shellsSec = section(tr('Shells rodando'), shellList);
@@ -356,20 +356,20 @@ class AgentView {
     this.actDetails = h('details', { class: 'ui-now__details' }, h('summary', { text: tr('Detalhes') }), this.actDetail);
     const nowSec = section(tr('Agora'), h('div', { class: 'ui-now' }, this.actIcon, h('div', { class: 'ui-now__body' }, this.actText, this.actTime)), this.actDetails);
     this.composer = new MessageComposer(ctx, 'drawer');
-    this.msgSec = section(tr('Mandar mensagem'), this.composer.el);
+    this.msgSec = section(tr('Ordem por rádio'), this.composer.el);
     // No celular a caixa fica presa no rodapé da gaveta enquanto a conversa rola (styles.css, .ui-sec--msg).
     this.msgSec.el.classList.add('ui-sec--msg');
     this.social = new SocialSection(ctx);
     this.perm = new PermissionCard(ctx);
 
-    this.tasksBar = createProgress(tr('Progresso das tarefas'));
+    this.tasksBar = createProgress(tr('Progresso dos objetivos'));
     const tasksList = h('ul', { class: 'ui-tasks' });
-    this.tasksSec = section(tr('Tarefas'), this.tasksBar, tasksList);
+    this.tasksSec = section(tr('Objetivos'), this.tasksBar, tasksList);
     this.tasks = new KeyedList<TaskItem>(tasksList, { key: (t) => t.id, create: createTaskItem, update: (li, t) => updateTaskItem(li, t) });
 
     const teamList = h('div', { class: 'ui-team' });
-    this.teamEmpty = h('p', { class: 'ui-muted ui-small', text: tr('Nenhum subagente no momento.') });
-    this.teamSec = section(tr('Subagentes'), teamList, this.teamEmpty);
+    this.teamEmpty = h('p', { class: 'ui-muted ui-small', text: tr('Nenhum reforço no momento.') });
+    this.teamSec = section(tr('Reforços'), teamList, this.teamEmpty);
     this.team = new KeyedList<AgentInfo>(teamList, {
       key: (a) => a.id,
       create: (a) => createAgentRow(a, (id) => ctx.select({ type: 'agent', id }, { focus: true }), 'sm'),
@@ -391,7 +391,7 @@ class AgentView {
       ['tokensOut', tr('Tokens de saída')],
       ['cost', tr('Custo estimado')],
       ['lines', tr('Linhas'), h('span', { class: 'ui-lines' }, this.linesPlus, this.linesMinus)],
-      ['subs', tr('Subagentes disparados')],
+      ['subs', tr('Reforços disparados')],
       ['model', tr('Modelo')],
       ['branch', 'Branch'],
       ['perm', tr('Permissões')],
@@ -549,7 +549,7 @@ class AgentView {
     setText(this.accEmail, accSub);
     setHidden(this.accEmail, !accSub);
     setText(this.roomName, room?.name ?? a.roomId);
-    setTitle(this.roomBtn, room ? tr('{0}\nClique para ver a sala', [room.path]) : '');
+    setTitle(this.roomBtn, room ? tr('{0}\nClique para ver a zona', [room.path]) : '');
     setHidden(this.gone, !!live);
     this.el.classList.toggle('is-gone', !live);
 
@@ -632,16 +632,16 @@ class AgentView {
     // Equipe: subagentes (principal) ou responsável (sub).
     if (a.kind === 'main') {
       const subs = sortByUrgency((this.ctx.store.snapshot?.agents ?? []).filter((s) => s.parentId === a.id));
-      setText(this.teamSec.title, tr('Subagentes'));
+      setText(this.teamSec.title, tr('Reforços'));
       setText(this.teamSec.extra, subs.length ? String(subs.length) : '');
-      setText(this.teamEmpty, a.stats.subagents ? tr('Nenhum ativo agora ({0} nesta sessão).', [plural(a.stats.subagents, tr('disparado'), tr('disparados'))]) : tr('Nenhum subagente disparado ainda.'));
+      setText(this.teamEmpty, a.stats.subagents ? tr('Nenhum ativo agora ({0} nesta sessão).', [plural(a.stats.subagents, tr('disparado'), tr('disparados'))]) : tr('Nenhum reforço disparado ainda.'));
       setHidden(this.teamEmpty, subs.length > 0);
       this.team.sync(subs);
     } else {
       const parent = a.parentId ? this.ctx.agent(a.parentId) : undefined;
       setText(this.teamSec.title, tr('Responsável'));
       setText(this.teamSec.extra, '');
-      setText(this.teamEmpty, tr('O agente principal já não está no escritório.'));
+      setText(this.teamEmpty, tr('O líder já não está no quartel-general.'));
       setHidden(this.teamEmpty, !!parent);
       this.team.sync(parent ? [parent] : []);
     }
@@ -714,17 +714,17 @@ class AgentView {
           ? this.ctx.store.replaying
             ? tr('Sem terminal no timelapse: a conversa é a de agora, não a do momento reproduzido.')
             : this.ctx.store.snapshot?.meta.terminal && access().remote
-              ? tr('O terminal não está liberado no acesso remoto (HABBLAUD_REMOTE_ALLOW).')
+              ? tr('O terminal não está liberado no acesso remoto (NIKO_PIXEL_REMOTE_ALLOW).')
               : TERMINAL_UNAVAILABLE_HINT
           : !live
-            ? tr('O agente já saiu do escritório.')
+            ? tr('O operador já saiu do quartel-general.')
             : kind === 'ao vivo'
               ? tr('Ver a conversa desta sessão como no {0}, ao vivo{1} (T)', [
                   provider === 'codex' ? 'Codex' : tr('terminal do Claude Code'),
                   this.pty.enabled && ptyControllable(this.last) ? tr('; "Assumir daqui" continua nela aqui') : '',
                 ])
               : kind === 'interativo'
-                ? tr('Abrir o terminal desta sessão, que roda aqui no Habblaud (T)')
+                ? tr('Abrir o terminal desta sessão, que roda aqui no Niko-Pixel (T)')
                 : tr('Abrir o terminal: a sessão roda em outro terminal; dá para assumir daqui (T)'),
     );
   }
@@ -827,7 +827,7 @@ class RoomView {
     // Lápis: o mesmo campo do botão direito na sala (ui/roomrename.ts), aberto embaixo do nome.
     this.renameBtn = iconButton(
       ICONS.pencil,
-      tr('Renomear sala'),
+      tr('Renomear zona'),
       () => {
         const r = this.name.getBoundingClientRect();
         ctx.renameRoom?.(this.id, { x: r.left, y: r.bottom + 6 });
@@ -835,10 +835,10 @@ class RoomView {
       'ui-icon-btn--sm ui-room-hero__rename',
     );
     this.path = h('span', { class: 'ui-room-hero__path' });
-    const centerBtn = h('button', { class: 'ui-btn', type: 'button', title: tr('Levar a câmera até a sala'), on: { click: () => ctx.focusSelection() } });
+    const centerBtn = h('button', { class: 'ui-btn', type: 'button', title: tr('Levar a câmera até a zona'), on: { click: () => ctx.focusSelection() } });
     centerBtn.innerHTML = ICONS.center;
     centerBtn.append(h('span', { text: tr('Centralizar') }));
-    this.gone = h('p', { class: 'ui-gone', text: tr('Esta sala foi fechada: todos os agentes saíram.'), hidden: true });
+    this.gone = h('p', { class: 'ui-gone', text: tr('Esta zona foi fechada: todos os operadores saíram.'), hidden: true });
 
     const accsEl = h('div', { class: 'ui-acc-list' });
     this.accs = new KeyedList<string>(accsEl, {
@@ -854,21 +854,21 @@ class RoomView {
     });
 
     const agentsList = h('div', { class: 'ui-team' });
-    this.agentsEmpty = h('p', { class: 'ui-muted ui-small', text: tr('Ninguém na sala agora.') });
-    this.agentsSec = section(tr('Agentes'), agentsList, this.agentsEmpty);
+    this.agentsEmpty = h('p', { class: 'ui-muted ui-small', text: tr('Ninguém na zona agora.') });
+    this.agentsSec = section(tr('Operadores'), agentsList, this.agentsEmpty);
     this.agents = new KeyedList<AgentInfo>(agentsList, {
       key: (a) => a.id,
       create: (a) => createAgentRow(a, (id) => ctx.select({ type: 'agent', id }, { focus: true }), 'sm'),
       update: (row, a) => updateAgentRow(row, a, ctx.account(a.account), false, ctx.now(), ctx.store.snapshot?.agents),
     });
 
-    this.tasksBar = createProgress(tr('Progresso das tarefas da sala'));
+    this.tasksBar = createProgress(tr('Progresso dos objetivos da zona'));
     const tasksList = h('ul', { class: 'ui-tasks' });
-    this.tasksSec = section(tr('Tarefas'), this.tasksBar, tasksList);
+    this.tasksSec = section(tr('Objetivos'), this.tasksBar, tasksList);
     this.tasks = new KeyedList(tasksList, { key: (t) => t.key, create: createTaskItem, update: (li, t) => updateTaskItem(li, t.task, t.owner) });
 
     const feedList = h('ol', { class: 'ui-timeline' });
-    this.feedSec = section(tr('Atividade recente'), feedList);
+    this.feedSec = section(tr('Últimas no rádio'), feedList);
     this.feed = new KeyedList<FeedItem>(feedList, { key: (f) => f.id, create: createTimelineItem, update: (li, f) => updateTimelineItem(li, f.activity, ctx.now(), f.agentName) });
 
     this.el = h(
@@ -983,7 +983,7 @@ export class Drawer implements UiComponent {
       this.body,
     );
     // Arrastar pela barra solta a gaveta: flutuante, ela não cobre mais a lateral do escritório.
-    this.movable = new Movable(this.el, bar, { key: 'habblaud.move.drawer', enabled: () => !ctx.isNarrow(), onChange: () => this.onLayoutChange?.() });
+    this.movable = new Movable(this.el, bar, { key: 'niko-pixel.move.drawer', enabled: () => !ctx.isNarrow(), onChange: () => this.onLayoutChange?.() });
     this.el.inert = true;
   }
 
@@ -1016,12 +1016,12 @@ export class Drawer implements UiComponent {
     if (sel?.type === 'agent') {
       if (this.agentView.agentId !== sel.id) this.body.scrollTop = 0;
       this.agentView.open(sel.id);
-      setText(this.heading, this.ctx.agent(sel.id)?.kind === 'sub' ? tr('Subagente') : tr('Agente'));
+      setText(this.heading, this.ctx.agent(sel.id)?.kind === 'sub' ? tr('Reforço') : tr('Operador'));
       this.agentView.render();
     } else if (sel?.type === 'room') {
       if (this.roomView.roomId !== sel.id) this.body.scrollTop = 0;
       this.roomView.open(sel.id);
-      setText(this.heading, tr('Sala'));
+      setText(this.heading, tr('Zona'));
       this.roomView.render();
     }
   }

@@ -149,14 +149,14 @@ export class TimelapsePlayer implements UiComponent {
     }
     this.demoBtn = h(
       'button',
-      { class: 'ui-btn ui-btn--sm ui-lapse__demo', type: 'button', text: tr('Demonstração'), title: tr('Mostrar também os agentes do modo demonstração gravados neste dia'), hidden: true },
+      { class: 'ui-btn ui-btn--sm ui-lapse__demo', type: 'button', text: tr('Demonstração'), title: tr('Mostrar também os operadores do modo demonstração gravados neste dia'), hidden: true },
     );
     this.demoBtn.addEventListener('click', () => {
       this.includeDemo = !this.includeDemo;
       if (this.active) this.seek(this.t);
       this.ctx.invalidate();
     });
-    const liveBtn = h('button', { class: 'ui-btn ui-btn--sm ui-lapse__live', type: 'button', title: tr('Sair do timelapse e voltar ao escritório ao vivo (L)') }, h('span', { class: 'ui-lapse__live-dot', attrs: { 'aria-hidden': 'true' } }), tr('Voltar ao vivo'));
+    const liveBtn = h('button', { class: 'ui-btn ui-btn--sm ui-lapse__live', type: 'button', title: tr('Sair do timelapse e voltar ao quartel-general ao vivo (L)') }, h('span', { class: 'ui-lapse__live-dot', attrs: { 'aria-hidden': 'true' } }), tr('Voltar ao vivo'));
     liveBtn.addEventListener('click', () => this.close());
 
     this.chart = h('canvas', { class: 'ui-lapse__chart', attrs: { 'aria-hidden': 'true' } });
@@ -261,8 +261,8 @@ export class TimelapsePlayer implements UiComponent {
       if (!r.days.length) {
         this.status = 'empty';
         this.message = r.recording
-          ? tr('Nada gravado ainda: o Habblaud grava o escritório enquanto está ligado. Volte daqui a pouco.')
-          : tr('A gravação está desligada neste servidor (HABBLAUD_TIMELINE=0) e não há dias gravados.');
+          ? tr('Nada gravado ainda: o Niko-Pixel grava o quartel-general enquanto está ligado. Volte daqui a pouco.')
+          : tr('A gravação está desligada neste servidor (NIKO_PIXEL_TIMELINE=0) e não há dias gravados.');
         this.ctx.invalidate();
         return;
       }
@@ -286,7 +286,7 @@ export class TimelapsePlayer implements UiComponent {
     this.exit();
     this.status = 'idle';
     this.ctx.invalidate();
-    this.ctx.announce(tr('De volta ao escritório ao vivo.'));
+    this.ctx.announce(tr('De volta ao quartel-general ao vivo.'));
   }
 
   /** Marca a velocidade atual e deixa só ela na ordem do Tab; com `focus`, move o foco para ela. */
@@ -567,7 +567,7 @@ export class TimelapsePlayer implements UiComponent {
       }
     }
     for (const p of r.peaks(view)) {
-      const label = tr('Pico às {0}: {1} {2}', [hhmm(p.at), p.working, p.working === 1 ? tr('agente trabalhando') : tr('agentes trabalhando')]);
+      const label = tr('Pico às {0}: {1} {2}', [hhmm(p.at), p.working, p.working === 1 ? tr('operador em ação') : tr('operadores em ação')]);
       const btn = h('button', { class: 'ui-lapse__peak', type: 'button', title: label, attrs: { 'aria-label': label }, style: `left: ${((p.at - r.from) / span) * 100}%` });
       btn.innerHTML = TIMELAPSE_ICONS.peak;
       btn.addEventListener('click', () => {

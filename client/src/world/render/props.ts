@@ -2,7 +2,9 @@
 // visuais do mundo (sombra, brilhos). Mesma direção de arte do módulo de arte: contorno
 // cinza-azulado escuro, 3–4 tons por material, luz vinda de cima/esquerda.
 import { mulberry32 } from '../../../../shared/hash';
+import type { PixelBuf } from '../../art/core/pixbuf';
 import type { ExteriorProp } from '../layout/types';
+import { heliBuf, heliShadowBuf, HELI, HELI_SHADOW, streetPropBuf, vehicleBuf, VEHICLE_SPECS, type VehicleKind } from './war-art';
 
 export interface PropSprite {
   canvas: HTMLCanvasElement;
@@ -322,7 +324,8 @@ function totemSprite(): PropSprite {
 }
 
 export function propSprite(prop: ExteriorProp): PropSprite {
-  const key = prop.kind === 'lamp' || prop.kind === 'bench' || prop.kind === 'totem' ? prop.kind : `${prop.kind}:${prop.seed % 7}`;
+  const key =
+    prop.kind === 'lamp' ? `lamp:${prop.lamp === 'off' ? 'off' : 'ok'}` : prop.kind === 'bench' || prop.kind === 'totem' ? prop.kind : `${prop.kind}:${prop.seed % 7}`;
   let s = cache.get(key);
   if (s) return s;
   switch (prop.kind) {
@@ -342,7 +345,13 @@ export function propSprite(prop: ExteriorProp): PropSprite {
       s = hedgeSprite(prop.seed % 7);
       break;
     case 'lamp':
-      s = lampSprite();
+      s = prop.lamp === 'off' ? bufSprite(...streetPropBuf('lamp_broken', prop.seed)) : lampSprite();
+      break;
+    case 'barrier':
+    case 'sandbags':
+    case 'hedgehog':
+    case 'rubble':
+      s = bufSprite(...streetPropBuf(prop.kind, prop.seed % 7));
       break;
     case 'bench':
       s = benchSprite();
@@ -420,6 +429,46 @@ export function carSprite(variant: number, flip: boolean): PropSprite {
     ctx.fillRect(wx + 2, 15, 1, 1);
   }
   const s = { canvas: c, ax: 18, ay: 17 };
+  cache.set(key, s);
+  return s;
+}
+
+/** PixelBuf (arte pura de war-art.ts) -> sprite em canvas. */
+function bufSprite(buf: PixelBuf, ax: number, ay: number): PropSprite {
+  const [c, ctx] = makeCanvas(buf.w, buf.h);
+  ctx.putImageData(new ImageData(buf.data, buf.w, buf.h), 0, 0);
+  return { canvas: c, ax, ay };
+}
+
+/** Veículo militar (tema tático) no quadro `frame` da esteira/rodas; `flip` vira para a esquerda. */
+export function vehicleSprite(kind: VehicleKind, variant: number, frame: number, flip: boolean): PropSprite {
+  const key = `veh:${kind}:${variant}:${frame}:${flip ? 1 : 0}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const spec = VEHICLE_SPECS[kind];
+  const buf = vehicleBuf(kind, variant, frame);
+  const s = bufSprite(flip ? buf.flipped() : buf, flip ? spec.w - 1 - spec.ax : spec.ax, spec.ay);
+  cache.set(key, s);
+  return s;
+}
+
+/** Helicóptero (quadro do rotor) e a sua sombra no chão. */
+export function heliSprite(variant: number, frame: number, flip: boolean): PropSprite {
+  const key = `heli:${variant}:${frame}:${flip ? 1 : 0}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const buf = heliBuf(variant, frame);
+  const s = bufSprite(flip ? buf.flipped() : buf, flip ? HELI.w - 1 - HELI.ax : HELI.ax, HELI.ay);
+  cache.set(key, s);
+  return s;
+}
+
+export function heliShadowSprite(flip: boolean): PropSprite {
+  const key = `heli-shadow:${flip ? 1 : 0}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const buf = heliShadowBuf();
+  const s = bufSprite(flip ? buf.flipped() : buf, flip ? HELI.w - 1 - HELI_SHADOW.ax : HELI_SHADOW.ax, HELI_SHADOW.ay);
   cache.set(key, s);
   return s;
 }

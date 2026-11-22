@@ -1,0 +1,18 @@
+{
+  "name": "niko-pixel",
+  "displayName": "Niko-Pixel",
+  "version": "1.0.3",
+  "description": "Liga a sessão ao Niko-Pixel: grava o uso do plano (5h e semanal) para o escritório, avisa embaixo do prompt quando outra sessão precisa de você e adiciona o comando /niko-pixel.",
+  "author": {
+    "name": "Márcio Junior",
+    "url": "https://github.com/marmottajr"
+  },
+  "license": "MIT",
+  "keywords": [
+    "niko-pixel",
+    "escritorio",
+    "uso",
+    "rate-limits",
+    "status"
+  ]
+}

@@ -288,7 +288,7 @@ export class TerminalStreams {
     const office = this.opts.office;
     if (office.has(agentId)) {
       const path = this.opts.transcriptPathOf(agentId);
-      if (!path) return tr('transcript do agente não encontrado');
+      if (!path) return tr('transcript do operador não encontrado');
       const parserFor = this.opts.parserFor;
       const createParser = parserFor ? () => parserFor(agentId) ?? this.createParser() : this.createParser;
       const o = { transcriptPathOf: this.opts.transcriptPathOf, createParser, initTailBytes: this.initTailBytes, initEntries: this.initEntries };
@@ -298,7 +298,7 @@ export class TerminalStreams {
     if (agentId.startsWith(DEMO_PREFIX) && office.detail(agentId)) {
       return new DemoSource(agentId, { office, demoEntries: this.demoEntries, initEntries: this.initEntries }, this.demoPollMs);
     }
-    return tr('agente não encontrado');
+    return tr('operador não encontrado');
   }
 
   private pump(s: Stream, source: ConversationSource, agentId: string): void {

@@ -58,17 +58,17 @@ describe('ferramenta (Claude Code ou Codex)', () => {
     expect(accountChipLabel({ name: 'Conta X', plan: 'Team', provider: 'codex' }, '.codex', 'codex')).toBe('Conta X · Codex · plano Team');
     expect(accountChipLabel({ name: 'Codex', plan: 'Team', provider: 'codex' }, '.codex', 'codex')).toBe('Codex · plano Team');
     expect(accountChipLabel(undefined, '.codex', 'codex')).toBe('.codex · Codex');
-    expect(accountChipLabel(undefined, '', 'claude')).toBe('Conta desconhecida');
+    expect(accountChipLabel(undefined, '', 'claude')).toBe('Equipe desconhecida');
   });
 
   it('escritório vazio: atalhos só das contas do Claude Code; o Codex entra quando há conta dele', () => {
     const c = { short: 'C' };
     const d = { short: 'D' };
     const x = { short: 'X', provider: 'codex' as const };
-    expect(emptyOfficeHint([c, d])).toBe('Abra o Claude Code em qualquer projeto (atalhos c ou d) e veja seu agente chegar.');
-    expect(emptyOfficeHint([c, d, x])).toBe('Abra o Claude Code (atalhos c ou d) ou o Codex em qualquer projeto e veja seu agente chegar.');
-    expect(emptyOfficeHint([x])).toBe('Abra o Claude Code ou o Codex em qualquer projeto e veja seu agente chegar.');
-    expect(emptyOfficeHint([])).toBe('Abra o Claude Code em qualquer projeto e veja seu agente chegar.');
+    expect(emptyOfficeHint([c, d])).toBe('Abra o Claude Code em qualquer projeto (atalhos c ou d) e veja seu operador chegar.');
+    expect(emptyOfficeHint([c, d, x])).toBe('Abra o Claude Code (atalhos c ou d) ou o Codex em qualquer projeto e veja seu operador chegar.');
+    expect(emptyOfficeHint([x])).toBe('Abra o Claude Code ou o Codex em qualquer projeto e veja seu operador chegar.');
+    expect(emptyOfficeHint([])).toBe('Abra o Claude Code em qualquer projeto e veja seu operador chegar.');
   });
 
   it('relógio de 1 s enquanto há pedido do Codex esperando', () => {

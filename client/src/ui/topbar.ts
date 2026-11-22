@@ -3,6 +3,7 @@ import { access } from '../net/access';
 import { SpawnPanel } from './spawn';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
+import { tacticalIcon } from './tactical-icons';
 import { formatDuration, formatInt } from './format';
 import { FALLBACK_MARK, ICONS } from './icons';
 import { computeCounters, shellLine, shellWaitIn, shellWaitingAgents, waitingAgents, type Counters } from './model';
@@ -21,11 +22,11 @@ interface CounterRefs {
 
 /** Contadores fixos (o de shells é à parte: só aparece quando há shells rodando). */
 const COUNTERS: { key: Exclude<keyof Counters, 'shells'>; singular: string; plural: string; hint: string }[] = [
-  { key: 'rooms', singular: tr('sala'), plural: tr('salas'), hint: tr('Salas abertas (uma por projeto)') },
-  { key: 'agents', singular: tr('agente'), plural: tr('agentes'), hint: tr('Agentes no escritório (principais e subagentes)') },
-  { key: 'working', singular: tr('trabalhando'), plural: tr('trabalhando'), hint: tr('Agentes processando um pedido agora') },
-  { key: 'subagents', singular: tr('subagente'), plural: tr('subagentes'), hint: tr('Subagentes em atividade') },
-  { key: 'waiting', singular: tr('precisa de você'), plural: tr('precisam de você'), hint: tr('Agentes esperando sua resposta no terminal') },
+  { key: 'rooms', singular: tr('zona'), plural: tr('zonas'), hint: tr('Zonas abertas (uma por projeto)') },
+  { key: 'agents', singular: tr('operador'), plural: tr('operadores'), hint: tr('Operadores no quartel-general (líderes e reforços)') },
+  { key: 'working', singular: tr('em ação'), plural: tr('em ação'), hint: tr('Operadores processando um pedido agora') },
+  { key: 'subagents', singular: tr('reforço'), plural: tr('reforços'), hint: tr('Reforços em atividade') },
+  { key: 'waiting', singular: tr('aguarda ordem'), plural: tr('aguardam ordem'), hint: tr('Operadores aguardando sua ordem no terminal') },
 ];
 const WAITING_HINT = COUNTERS.find((c) => c.key === 'waiting')!.hint;
 
@@ -34,7 +35,7 @@ export class TopBar implements UiComponent {
   private pill: HTMLElement;
   private pillText: HTMLElement;
   private demoBadge: HTMLElement;
-  /** Linha de baixo da marca (conexão, versão, selos): o chip do Habblaud World entra aqui (ui/index.ts). */
+  /** Linha de baixo da marca (conexão, versão, selos). */
   private status: HTMLElement;
   private counters = new Map<keyof Counters, CounterRefs>();
   private shellsBtn: HTMLButtonElement;
@@ -47,11 +48,9 @@ export class TopBar implements UiComponent {
   private feedBtn: HTMLButtonElement;
   private timelapseBtn: HTMLButtonElement;
   readonly settingsBtn: HTMLButtonElement;
-  /** Abre a janela do Habblaud World (ao lado de Configurações); a janela decide quando ele aparece. */
-  readonly worldBtn: HTMLButtonElement;
   private readonly spawnBtn: HTMLButtonElement;
   private readonly spawnPanel: SpawnPanel;
-  /** Grupo dos botões de painéis (feed, Habblaud World, configurações, ajuda); o histórico entra aqui (ui/index.ts). */
+  /** Grupo dos botões de painéis (feed, configurações, ajuda); o histórico entra aqui (ui/index.ts). */
   readonly panelGroup: HTMLElement;
 
   constructor(private ctx: UiContext) {
@@ -65,9 +64,9 @@ export class TopBar implements UiComponent {
 
     this.pillText = h('span', { class: 'ui-pill__text' });
     this.pill = h('span', { class: 'ui-pill', role: 'status', attrs: { 'aria-live': 'polite' } }, h('span', { class: 'ui-pill__dot' }), this.pillText);
-    this.demoBadge = h('span', { class: 'ui-demo-badge', text: tr('Demonstração'), title: tr('Agentes de demonstração ligados (desligue em Configurações)'), hidden: true });
+    this.demoBadge = h('span', { class: 'ui-demo-badge', text: tr('Demonstração'), title: tr('Operadores de demonstração ligados (desligue em Configurações)'), hidden: true });
 
-    const counterWrap = h('div', { class: 'ui-counters', role: 'group', attrs: { 'aria-label': tr('Resumo do escritório') } });
+    const counterWrap = h('div', { class: 'ui-counters', role: 'group', attrs: { 'aria-label': tr('Resumo do quartel-general') } });
     for (const c of COUNTERS) {
       const value = h('span', { class: 'ui-counter__value', text: '0' });
       const label = h('span', { class: 'ui-counter__label', text: c.plural });
@@ -103,17 +102,13 @@ export class TopBar implements UiComponent {
     this.usage = new UsageCards(ctx);
 
     this.sidebarBtn = iconButton(ICONS.sidebar, tr('Painel lateral ( [ )'), () => ctx.togglePanel('sidebar'), 'ui-btn-sidebar');
-    this.feedBtn = iconButton(ICONS.feed, tr('Feed de atividade ( ] )'), () => ctx.togglePanel('feed'), 'ui-btn-feed');
-    this.timelapseBtn = iconButton(TIMELAPSE_ICONS.timelapse, tr('Timelapse: reproduzir o dia (L)'), () => ctx.toggleTimelapse(), 'ui-btn-timelapse');
-    // Habblaud World: escondido até a janela dele (ui/world/world-dialog.ts) dizer que há servidor do mundo configurado.
-    this.worldBtn = iconButton(ICONS.city, tr('Habblaud World'), () => ctx.toggleWorld(), 'ui-btn-world');
-    this.worldBtn.setAttribute('aria-haspopup', 'dialog');
-    this.worldBtn.hidden = true;
-    this.settingsBtn = iconButton(ICONS.settings, tr('Configurações'), () => ctx.toggleSettings());
+    this.feedBtn = iconButton(tacticalIcon('feed', ICONS.feed), tr('Rádio ( ] )'), () => ctx.togglePanel('feed'), 'ui-btn-feed');
+    this.timelapseBtn = iconButton(tacticalIcon('timelapse', TIMELAPSE_ICONS.timelapse), tr('Timelapse: reproduzir o dia (L)'), () => ctx.toggleTimelapse(), 'ui-btn-timelapse');
+    this.settingsBtn = iconButton(tacticalIcon('settings', ICONS.settings), tr('Configurações'), () => ctx.toggleSettings());
     this.settingsBtn.setAttribute('aria-haspopup', 'dialog');
     this.spawnPanel = new SpawnPanel(ctx);
     ctx.root.append(this.spawnPanel.el);
-    this.spawnBtn = iconButton(ICONS.newAgent, tr('Novo agente: começa uma sessão do Claude Code no computador'), () => this.spawnPanel.toggle(this.spawnBtn), 'ui-btn-spawn');
+    this.spawnBtn = iconButton(ICONS.newAgent, tr('Mobilizar operador: começa uma sessão do Claude Code no computador'), () => this.spawnPanel.toggle(this.spawnBtn), 'ui-btn-spawn');
     this.spawnBtn.setAttribute('aria-haspopup', 'dialog');
     this.spawnBtn.hidden = true;
     this.version = new VersionChip(ctx, this.settingsBtn);
@@ -121,7 +116,7 @@ export class TopBar implements UiComponent {
     const viewGroup = h(
       'div',
       { class: 'ui-btn-group', role: 'group', attrs: { 'aria-label': tr('Câmera') } },
-      iconButton(ICONS.overview, tr('Visão geral (O)'), () => ctx.camera('overview')),
+      iconButton(tacticalIcon('overview', ICONS.overview), tr('Visão geral (O)'), () => ctx.camera('overview')),
       iconButton(ICONS.zoomOut, tr('Afastar (−)'), () => ctx.camera('zoomOut')),
       iconButton(ICONS.zoomIn, tr('Aproximar (+)'), () => ctx.camera('zoomIn')),
     );
@@ -131,9 +126,8 @@ export class TopBar implements UiComponent {
       this.spawnBtn,
       this.timelapseBtn,
       this.feedBtn,
-      this.worldBtn,
       this.settingsBtn,
-      iconButton(ICONS.help, tr('Ajuda (?)'), () => ctx.openHelp()),
+      iconButton(tacticalIcon('help', ICONS.help), tr('Ajuda (?)'), () => ctx.openHelp()),
     );
     this.panelGroup = panelGroup;
 
@@ -155,16 +149,6 @@ export class TopBar implements UiComponent {
       this.usage.el,
       h('div', { class: 'ui-topbar__right' }, viewGroup, panelGroup),
     );
-  }
-
-  /** Acrescenta um selo à linha de status da marca, depois da versão (ex.: o chip do Habblaud World). */
-  addStatus(el: HTMLElement): void {
-    this.status.append(el);
-  }
-
-  /** Botão Mundo (troca de cena), ao lado do Timelapse. */
-  addSceneButton(btn: HTMLElement): void {
-    this.panelGroup.insertBefore(btn, this.timelapseBtn);
   }
 
   /** Acrescenta um botão de janela própria (ex.: Meu dia) ao começo do grupo de painéis. */
@@ -189,7 +173,7 @@ export class TopBar implements UiComponent {
         ? tr('Dados simulados no navegador (?mock=1)')
         : conn === 'open'
           ? tr('Recebendo eventos do servidor em tempo real')
-          : tr('Sem conexão com o servidor do Habblaud'),
+          : tr('Sem conexão com o servidor do Niko-Pixel'),
     );
     setHidden(this.demoBadge, !(conn === 'open' && snap?.meta.demo));
 
@@ -238,7 +222,7 @@ export class TopBar implements UiComponent {
     const agents = shellWaitingAgents(all, now);
     setText(refs.value, formatInt(n));
     setText(refs.label, n === 1 ? 'shell' : 'shells');
-    const who = agents.length === 1 ? agents[0].name : tr('{0} agentes', [formatInt(agents.length)]);
+    const who = agents.length === 1 ? agents[0].name : tr('{0} operadores', [formatInt(agents.length)]);
     setAttr(refs.el, 'aria-label', tr('{0} {1}; {2} esperando. Ir até o próximo.', [formatInt(n), n === 1 ? tr('shell rodando') : tr('shells rodando'), who]));
     // Dica: quem espera o quê, do que espera há mais tempo.
     const lines = agents.slice(0, 6).map((a) => {
@@ -246,7 +230,7 @@ export class TopBar implements UiComponent {
       return `${a.name}: ${shellLine(w, now).label} (${formatDuration(now - w.since)})`;
     });
     if (agents.length > 6) lines.push(tr('… e mais {0}', [agents.length - 6]));
-    setTitle(refs.el, tr('Shells rodando: {0} terminar.\n{1}\nClique para ir até {2}.', [agents.length === 1 ? tr('o agente espera') : tr('os agentes esperam'), lines.join('\n'), agents.length > 1 ? tr('cada um') : tr('ele')]));
+    setTitle(refs.el, tr('Shells rodando: {0} terminar.\n{1}\nClique para ir até {2}.', [agents.length === 1 ? tr('o operador espera') : tr('os operadores esperam'), lines.join('\n'), agents.length > 1 ? tr('cada um') : tr('ele')]));
   }
 
   private focusNextShell(): void {

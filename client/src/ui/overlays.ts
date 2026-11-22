@@ -27,7 +27,7 @@ export class Splash implements UiComponent {
   private tick: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private ctx: UiContext) {
-    this.text = h('p', { class: 'ui-splash__text', text: tr('Conectando ao escritório…') });
+    this.text = h('p', { class: 'ui-splash__text', text: tr('Conectando ao quartel-general…') });
     this.el = h(
       'div',
       { class: 'ui-splash', role: 'status', attrs: { 'aria-live': 'polite' } },
@@ -47,9 +47,9 @@ export class Splash implements UiComponent {
       return;
     }
     const waited = performance.now() - this.startedAt;
-    let text = tr('Conectando ao escritório…');
-    if (waited > DISCONNECTED_BANNER_MS) text = tr('O servidor do Habblaud não responde. Confira se ele está rodando (npm run dev ou npm start); seguimos tentando.');
-    else if (store.connection === 'closed') text = tr('Não foi possível conectar ao servidor do Habblaud. Tentando de novo…');
+    let text = tr('Conectando ao quartel-general…');
+    if (waited > DISCONNECTED_BANNER_MS) text = tr('O servidor do Niko-Pixel não responde. Confira se ele está rodando (npm run dev ou npm start); seguimos tentando.');
+    else if (store.connection === 'closed') text = tr('Não foi possível conectar ao servidor do Niko-Pixel. Tentando de novo…');
     setText(this.text, text);
     // Reavalia o texto mesmo sem eventos novos.
     this.tick ??= setTimeout(() => {
@@ -96,7 +96,7 @@ export class EmptyState implements UiComponent {
       'section',
       { class: 'ui-empty', hidden: true, attrs: { 'aria-labelledby': 'ui-empty-title' } },
       art,
-      h('h2', { class: 'ui-empty__title', text: tr('O escritório está vazio'), attrs: { id: 'ui-empty-title' } }),
+      h('h2', { class: 'ui-empty__title', text: tr('O quartel-general está vazio'), attrs: { id: 'ui-empty-title' } }),
       this.hint,
       this.demoBtn,
     );
@@ -172,8 +172,8 @@ export class ConnectionBanner implements UiComponent {
     setText(
       this.text,
       store.snapshot
-        ? tr('Sem conexão com o servidor do Habblaud há algum tempo. O escritório mostra o último estado conhecido.')
-        : tr('O servidor do Habblaud não responde. Confira se ele está rodando (npm run dev ou npm start).'),
+        ? tr('Sem conexão com o servidor do Niko-Pixel há algum tempo. O quartel-general mostra o último estado conhecido.')
+        : tr('O servidor do Niko-Pixel não responde. Confira se ele está rodando (npm run dev ou npm start).'),
     );
     const next = store.nextRetryAt;
     const secs = next === null ? 0 : Math.max(1, Math.ceil((next - Date.now()) / 1000));

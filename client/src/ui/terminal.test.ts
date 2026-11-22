@@ -217,16 +217,16 @@ describe('terminalFooter', () => {
     expect(terminalFooter(a, [a], now)).toEqual({ kind: 'working', text: 'Editando App.tsx…', since: 1_000 });
     const b = agent({ activity: { id: 'x', kind: 'think', icon: '💭', text: 'Pensando…', at: 0 } });
     expect(terminalFooter(b, [b], now).text).toBe('Pensando…');
-    expect(terminalFooter(agent(), [], now).text).toBe('Trabalhando…');
+    expect(terminalFooter(agent(), [], now).text).toBe('Em ação…');
   });
 
   it('esperando você, ocioso e encerrado', () => {
     const perm = { id: 'p1', tool: 'Bash', title: 'Bash(ls)' } as unknown as NonNullable<AgentInfo['permission']>;
-    expect(terminalFooter(agent({ status: 'waiting', waitingFor: 'aprovar uma permissão', permission: perm }), [], now).text).toBe('Esperando você: aprovar uma permissão');
+    expect(terminalFooter(agent({ status: 'waiting', waitingFor: 'aprovar uma permissão', permission: perm }), [], now).text).toBe('Aguardando ordem: aprovar uma permissão');
     expect(terminalFooter(agent({ status: 'waiting', waitingFor: 'aprovar uma permissão' }), [], now).text).toBe(
-      'Esperando você: aprovar uma permissão · responda no Claude Code: este pedido não chegou ao Habblaud ou passou do tempo de espera',
+      'Aguardando ordem: aprovar uma permissão · responda no Claude Code: este pedido não chegou ao Niko-Pixel ou passou do tempo de espera',
     );
-    expect(terminalFooter(agent({ status: 'waiting', provider: 'codex' }), [], now).text).toMatch(/^Esperando você · responda no Codex:/);
+    expect(terminalFooter(agent({ status: 'waiting', provider: 'codex' }), [], now).text).toMatch(/^Aguardando ordem · responda no Codex:/);
     expect(terminalFooter(agent({ status: 'idle' }), [], now)).toEqual({ kind: 'idle', text: 'Aguardando o próximo prompt' });
     expect(terminalFooter(agent({ status: 'offline' }), [], now).kind).toBe('ended');
     expect(terminalFooter(agent({ kind: 'sub', status: 'done' }), [], now).kind).toBe('ended');
@@ -236,7 +236,7 @@ describe('terminalFooter', () => {
   it('esperando o shell (segundo plano ou comando longo em primeiro plano)', () => {
     const job: ShellJob = { id: 'j', label: 'Rodar a suíte', startedAt: 40_000, background: true, kind: 'shell' };
     const a = agent({ status: 'shell', shells: [job, { ...job, id: 'k', startedAt: 50_000 }] });
-    expect(terminalFooter(a, [a], now)).toEqual({ kind: 'shell', text: 'Esperando o shell: Rodar a suíte (+1)', since: 40_000 });
+    expect(terminalFooter(a, [a], now)).toEqual({ kind: 'shell', text: 'Segurando posição (shell): Rodar a suíte (+1)', since: 40_000 });
     const fg = agent({ status: 'working', shells: [{ ...job, background: false, startedAt: now - 60_000 }] });
     expect(terminalFooter(fg, [fg], now).kind).toBe('shell');
   });

@@ -1,11 +1,14 @@
 // Área externa: grama, árvores, calçada e rua; pátio/jardim nos slots sem sala.
 import type { WallStyle } from '../../art/api';
+import { TACTICAL_THEME } from '../../art/theme';
 import { mulberry32 } from '../../../../shared/hash';
 import { BUILDING_H, COL_W, CORE_COLS, CORRIDOR_Y, EXT_EAST, EXT_NORTH, EXT_SOUTH, EXT_WEST, SOUTH_Y, TILE } from '../constants';
 import { cellRect, slotAt, slotColumn, slotSide } from './geometry';
 import type { ExteriorProp, FloorPatch, TileRect, WallItemPlacement, WallSegment } from './types';
 
-export const EXTERIOR_WALL: WallStyle = { base: '#cfc8bd', trim: '#8a8174', pattern: 'brick', exterior: true };
+export const EXTERIOR_WALL: WallStyle = TACTICAL_THEME
+  ? { base: '#b5a88e', trim: '#5e5444', pattern: 'cinder', exterior: true }
+  : { base: '#cfc8bd', trim: '#8a8174', pattern: 'brick', exterior: true };
 
 export interface ExteriorLayout {
   /** Limites da área desenhada (tiles). */
@@ -81,8 +84,9 @@ export function layoutExterior(cols: number): ExteriorLayout {
     props.push({ kind: (x / 2) % 3 === 1 ? 'flowers' : 'hedge', x: px(x) + TILE, y: px(south + 1) + 10, seed: x * 7 + 3, whenRoom: gate });
   }
   for (let x = bounds.x + 4; x < bounds.x + bounds.w; x += 10) {
-    props.push({ kind: 'lamp', x: px(x), y: px(south + 3) + 6, seed: x });
+    props.push({ kind: 'lamp', x: px(x), y: px(south + 3) + 6, seed: x, lamp: lampMode(x) });
   }
+  if (TACTICAL_THEME) warStreetProps(props, bounds, south);
   for (const row of [13, 17, 21]) {
     for (let x = bounds.x + 3; x < bounds.x + bounds.w - 2; x += 6 + Math.floor(rng() * 5)) {
       props.push({ kind: rng() < 0.2 ? 'pine' : 'tree', x: px(x) + Math.floor(rng() * 10), y: px(south + row) + Math.floor(rng() * 10), seed: Math.floor(rng() * 1e9) });
@@ -106,6 +110,70 @@ export function layoutExterior(cols: number): ExteriorLayout {
     streetY,
     streetH,
   };
+}
+
+/** Hash inteiro pequeno e determinístico (posições dos obstáculos da rua). */
+function hashXY(x: number, y: number): number {
+  let h = Math.imul(x | 0, 0x9e3779b1) ^ Math.imul((y | 0) + 0x5bd1, 0x85ebca77);
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x2c1b3c6d);
+  h ^= h >>> 13;
+  return h >>> 0;
+}
+
+/** Estado de um poste (tema tático): uns piscam, outros foram atingidos. Clássico: todos acesos. */
+export function lampMode(seed: number): 'ok' | 'flicker' | 'off' {
+  if (!TACTICAL_THEME) return 'ok';
+  const h = hashXY(seed, 77) % 10;
+  return h < 2 ? 'off' : h < 4 ? 'flicker' : 'ok';
+}
+
+/**
+ * Intensidade (0..1) de um poste que pisca no instante `now` (ms): quase sempre aceso, com
+ * rajadas curtas de falha a cada poucos segundos. Determinístico por semente e tempo.
+ */
+export function lampFlicker(seed: number, now: number): number {
+  const burst = hashXY(seed, Math.floor(now / 1700)) % 3 === 0;
+  if (!burst) return 1;
+  const h = hashXY(seed * 31 + 7, Math.floor(now / 70)) % 5;
+  return h === 0 ? 1 : h < 3 ? 0.08 : 0.45;
+}
+
+/**
+ * Obstáculos de guerra nas calçadas: sacos de areia, barreiras de concreto e entulho junto ao
+ * meio-fio norte; barreiras em fileira e ouriços tchecos na calçada sul. Fica fora do caminho da
+ * entrada e longe dos postes; posições só dependem da coordenada (estáveis ao crescer o prédio).
+ */
+function warStreetProps(props: ExteriorProp[], bounds: TileRect, south: number): void {
+  const lamps = props.filter((p) => p.kind === 'lamp').map((p) => p.x / TILE);
+  const nearLamp = (tx: number) => lamps.some((lx) => Math.abs(lx - tx) < 2.5);
+  const x1 = bounds.x + bounds.w - 2;
+  // meio-fio norte (lado do prédio): longe do caminho da recepção (x -3..-1)
+  for (let tx = bounds.x + 2; tx < x1; tx++) {
+    const h = hashXY(tx, 1);
+    if (h % 100 >= 9 || nearLamp(tx) || (tx >= -6 && tx <= 1)) continue;
+    const k = (h >>> 8) % 20;
+    const kind: ExteriorProp['kind'] = k < 10 ? 'sandbags' : k < 16 ? 'barrier' : 'rubble';
+    props.push({ kind, x: tx * TILE + 8, y: (south + 4) * TILE - 2, seed: h >>> 4 });
+    tx += 3;
+  }
+  // calçada sul: fileiras de barreiras e grupos de ouriços
+  for (let tx = bounds.x + 2; tx < x1; tx++) {
+    const h = hashXY(tx, 2);
+    if (h % 100 >= 8) continue;
+    if ((h >>> 8) % 2 === 0) {
+      const n = 2 + ((h >>> 9) % 2);
+      for (let i = 0; i < n; i++) props.push({ kind: 'barrier', x: tx * TILE + i * 34, y: (south + 9) * TILE + 14, seed: (h >>> 3) + i });
+      tx += 2 * n + 2;
+    } else {
+      const n = 1 + ((h >>> 9) % 3);
+      for (let i = 0; i < n; i++) {
+        const j = hashXY(tx + i, 3);
+        props.push({ kind: 'hedgehog', x: tx * TILE + i * 18 + (j % 5), y: (south + 9) * TILE + 16 + ((j >>> 4) % 8), seed: j });
+      }
+      tx += n + 3;
+    }
+  }
 }
 
 /** Parede externa + jardim de um slot vazio: deck de madeira com mesas e guarda-sóis, canteiros e caminho. */

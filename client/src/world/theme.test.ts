@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { TACTICAL_THEME } from '../art/theme';
 import { seasonalThemeFor } from './api';
 
 describe('tema do escritório', () => {
   const at = (month: number, day: number, hour = 12) => new Date(2026, month - 1, day, hour);
 
-  it('automático segue o calendário (hora local)', () => {
+  it.runIf(TACTICAL_THEME)('tema tático: o automático não põe Natal nem Halloween', () => {
+    for (const date of [at(1, 1), at(10, 13), at(12, 1)]) expect(seasonalThemeFor('auto', date)).toBe('none');
+  });
+
+  it.skipIf(TACTICAL_THEME)('automático segue o calendário (hora local)', () => {
     expect(seasonalThemeFor('auto', at(9, 30, 23))).toBe('none');
     expect(seasonalThemeFor('auto', at(10, 1, 0))).toBe('halloween');
     expect(seasonalThemeFor('auto', at(10, 31, 23))).toBe('halloween');

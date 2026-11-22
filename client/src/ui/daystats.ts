@@ -48,9 +48,9 @@ import { tr } from '../../../shared/i18n';
 
 const REFRESH_MS = 30_000;
 const NOTE =
-  tr('Tempo de agentes é a soma de todos eles: dois agentes trabalhando por 1 hora contam 2 horas. ') +
-  tr('“Esperando você” é o tempo de mão levantada no escritório (permissão, pergunta ou escolha). ') +
-  tr('O Habblaud só conta o que acontece enquanto ele está rodando.');
+  tr('Tempo de operadores é a soma de todos eles: dois operadores trabalhando por 1 hora contam 2 horas. ') +
+  tr('“Aguardando ordem” é o tempo de mão levantada no quartel-general (permissão, pergunta ou escolha). ') +
+  tr('O Niko-Pixel só conta o que acontece enquanto ele está rodando.');
 
 /** De onde vêm os números: o servidor ou, no ?mock=1, o acumulador local. */
 interface DaySource {
@@ -338,7 +338,7 @@ export class DayPanel implements UiComponent {
         h('p', {
           class: 'ui-day__empty',
           text: today
-            ? tr('Ainda não há tempo registrado hoje. Os números aparecem assim que algum agente trabalhar com o Habblaud aberto.')
+            ? tr('Ainda não há tempo registrado hoje. Os números aparecem assim que algum operador trabalhar com o Niko-Pixel aberto.')
             : tr('Nada registrado neste dia.'),
         }),
       );
@@ -358,7 +358,7 @@ export class DayPanel implements UiComponent {
     const hero = h(
       'div',
       { class: 'ui-day__hero' },
-      h('p', { class: 'ui-day__kpi-label' }, swatch, h('span', { text: tr('Esperando você') })),
+      h('p', { class: 'ui-day__kpi-label' }, swatch, h('span', { text: tr('Aguardando ordem') })),
       h('p', { class: 'ui-day__hero-value', text: hl.waiting }),
       h('p', { class: 'ui-day__kpi-sub', text: hl.waits }),
       hl.longest ? h('p', { class: 'ui-day__kpi-sub' }, h('span', { class: 'ui-day__muted', text: tr('Maior espera: ') }), h('strong', { text: hl.longest })) : null,
@@ -376,7 +376,7 @@ export class DayPanel implements UiComponent {
       'section',
       { class: 'ui-day__kpis', attrs: { 'aria-label': tr('Destaques do dia') } },
       hero,
-      tile(tr('Trabalhando'), hl.working, tr('soma do tempo de todos os agentes'), undefined, 'working'),
+      tile(tr('Em ação'), hl.working, tr('soma do tempo de todos os operadores'), undefined, 'working'),
       tile(tr('Sessões'), hl.sessions, hl.subagents),
       tile(tr('Pedidos'), hl.prompts, hl.activity),
       tile('Tokens', hl.tokens, hl.tokensDetail),
@@ -458,10 +458,10 @@ export class DayPanel implements UiComponent {
   private hoursCard(res: DayStatsResponse): HTMLElement {
     const narrow = this.ctx.isNarrow();
     const { columns, axis } = hourColumns(res.stats.hours, this.visible, res.serverTime, narrow ? 6 : 3);
-    const c = this.card('hours', tr('Por hora'), tr('Tempo de agentes em cada hora do dia'), 'hours');
+    const c = this.card('hours', tr('Por hora'), tr('Tempo de operadores em cada hora do dia'), 'hours');
     if (c.showTable) {
       const t = statusTable(columns, (col) => col.range, this.visible);
-      c.body.append(this.table([tr('Hora'), ...t.head], t.rows, tr('Tempo de agentes por hora')));
+      c.body.append(this.table([tr('Hora'), ...t.head], t.rows, tr('Tempo de operadores por hora')));
       return c.el;
     }
     const grid = h(
@@ -469,7 +469,7 @@ export class DayPanel implements UiComponent {
       { class: 'ui-day__grid', attrs: { 'aria-hidden': 'true' } },
       ...axis.ticks.map((tick) => h('span', { class: 'ui-day__gridline', style: `bottom:${(tick / axis.max) * 100}%` }, h('span', { class: 'ui-day__tick', text: axisLabel(tick) }))),
     );
-    const cols = h('div', { class: 'ui-day__cols', role: 'list', attrs: { 'aria-label': tr('Tempo de agentes por hora (setas para navegar)') } });
+    const cols = h('div', { class: 'ui-day__cols', role: 'list', attrs: { 'aria-label': tr('Tempo de operadores por hora (setas para navegar)') } });
     let tabbable = columns.findIndex((col) => col.now);
     if (tabbable < 0) tabbable = 0;
     columns.forEach((col, i) => cols.append(this.column(col, i === tabbable)));
@@ -523,14 +523,14 @@ export class DayPanel implements UiComponent {
   // ---------------------------------------------------------------- por projeto
 
   private roomsCard(rows: RoomRow[]): HTMLElement {
-    const c = this.card('rooms', tr('Por projeto'), tr('Ordenado pelo tempo esperando você'), 'rooms');
+    const c = this.card('rooms', tr('Por projeto'), tr('Ordenado pelo tempo aguardando ordem'), 'rooms');
     if (!rows.length) {
       c.body.append(h('p', { class: 'ui-day__muted', text: tr('Nenhum projeto com tempo neste dia.') }));
       return c.el;
     }
     if (c.showTable) {
       const t = statusTable(rows, (r) => r.name, this.visible);
-      c.body.append(this.table([tr('Projeto'), ...t.head], t.rows, tr('Tempo de agentes por projeto')));
+      c.body.append(this.table([tr('Projeto'), ...t.head], t.rows, tr('Tempo de operadores por projeto')));
       return c.el;
     }
     const list = h('ul', { class: 'ui-day__bars' });
@@ -565,7 +565,7 @@ export class DayPanel implements UiComponent {
   // ---------------------------------------------------------------- maiores esperas
 
   private waitsCard(rows: ReturnType<typeof waitRows>, res: DayStatsResponse): HTMLElement {
-    const c = this.card('waits', tr('Maiores esperas'), tr('Quanto tempo cada agente ficou de mão levantada esperando você'));
+    const c = this.card('waits', tr('Maiores esperas'), tr('Quanto tempo cada operador ficou de mão levantada aguardando ordem'));
     if (!rows.length) {
       c.body.append(h('p', { class: 'ui-day__muted', text: tr('Nenhuma espera por você neste dia.') }));
       return c.el;
@@ -611,9 +611,9 @@ export class DayPanel implements UiComponent {
 
   private accountsCard(res: DayStatsResponse): HTMLElement {
     const cards = accountCards(res.stats.accounts, (id) => this.isCodexAccount(id));
-    const c = this.card('accounts', tr('Por conta'), tr('Cada conta na cor dela, com a fatia do tempo de trabalho do dia'));
+    const c = this.card('accounts', tr('Por equipe'), tr('Cada equipe na cor dela, com a fatia do tempo de trabalho do dia'));
     if (!cards.length) {
-      c.body.append(h('p', { class: 'ui-day__muted', text: tr('Nenhuma conta com tempo neste dia.') }));
+      c.body.append(h('p', { class: 'ui-day__muted', text: tr('Nenhuma equipe com tempo neste dia.') }));
       return c.el;
     }
     const grid = h('div', { class: 'ui-day__accounts' });
@@ -635,8 +635,8 @@ export class DayPanel implements UiComponent {
         h(
           'dl',
           { class: 'ui-day__account-stats' },
-          ...stat(tr('Trabalhando'), a.working),
-          ...stat(tr('Esperando você'), a.waiting),
+          ...stat(tr('Em ação'), a.working),
+          ...stat(tr('Aguardando ordem'), a.waiting),
           ...stat('Tokens', a.tokens),
           // Codex: não grava custo, só tokens.
           ...(a.cost !== null ? stat(tr('Custo'), a.cost) : [h('dt', { text: tr('Custo') }), h('dd', { text: tr('só tokens'), title: tr('O Codex não grava custo, só tokens') })]),

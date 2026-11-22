@@ -61,7 +61,7 @@ export class Sidebar implements UiComponent {
     this.input = h('input', {
       class: 'ui-search__input',
       type: 'search',
-      attrs: { placeholder: tr('Buscar agente, projeto ou conta'), 'aria-label': tr('Buscar agente, projeto ou conta'), autocomplete: 'off', spellcheck: 'false' },
+      attrs: { placeholder: tr('Buscar operador, projeto ou equipe'), 'aria-label': tr('Buscar operador, projeto ou equipe'), autocomplete: 'off', spellcheck: 'false' },
     });
     this.input.addEventListener('input', () => {
       this.query = this.input.value;
@@ -83,7 +83,7 @@ export class Sidebar implements UiComponent {
     searchIcon.innerHTML = ICONS.search;
     const search = h('label', { class: 'ui-search' }, searchIcon, this.input, h('kbd', { class: 'ui-kbd', text: '/', title: tr('Atalho: /') }));
 
-    this.filters = h('div', { class: 'ui-acc-filters', role: 'group', attrs: { 'aria-label': tr('Filtrar por conta') } });
+    this.filters = h('div', { class: 'ui-acc-filters', role: 'group', attrs: { 'aria-label': tr('Filtrar por equipe') } });
     this.filterList = new KeyedList<AccountInfo, HTMLButtonElement>(this.filters, {
       animate: false,
       key: (a) => a.id,
@@ -98,13 +98,13 @@ export class Sidebar implements UiComponent {
         updateAccountChip(b.firstElementChild as HTMLElement, a);
         setText(b.lastElementChild!, a.name);
         setAttr(b, 'aria-pressed', String(!hidden));
-        setTitle(b, hidden ? tr('Mostrar a {0} na lista, no feed e nos avisos', [a.name]) : tr('Ocultar a {0} na lista, no feed e nos avisos (o escritório continua mostrando todos)', [a.name]));
+        setTitle(b, hidden ? tr('Mostrar a {0} na lista, no rádio e nos avisos', [a.name]) : tr('Ocultar a {0} na lista, no rádio e nos avisos (o quartel-general continua mostrando todos)', [a.name]));
         b.classList.toggle('is-off', hidden);
       },
     });
 
     this.scroller = h('div', { class: 'ui-side__scroll' });
-    const list = h('div', { class: 'ui-rooms', role: 'list', attrs: { 'aria-label': tr('Salas') } });
+    const list = h('div', { class: 'ui-rooms', role: 'list', attrs: { 'aria-label': tr('Zonas') } });
     this.scroller.append(list);
     this.rooms = new KeyedList<RoomGroup>(list, {
       key: (g) => g.room.id,
@@ -131,8 +131,8 @@ export class Sidebar implements UiComponent {
     const close = iconButton(ICONS.close, tr('Fechar painel lateral'), () => ctx.togglePanel('sidebar', false), 'ui-side__close');
     this.el = h(
       'aside',
-      { class: 'ui-panel ui-sidebar', attrs: { 'aria-label': tr('Salas e agentes'), id: 'ui-sidebar' } },
-      h('div', { class: 'ui-side__head' }, h('div', { class: 'ui-side__title' }, h('h2', { text: tr('Escritório') }), close), search, this.filters),
+      { class: 'ui-panel ui-sidebar', attrs: { 'aria-label': tr('Zonas e operadores'), id: 'ui-sidebar' } },
+      h('div', { class: 'ui-side__head' }, h('div', { class: 'ui-side__title' }, h('h2', { text: tr('Quartel-General') }), close), search, this.filters),
       this.scroller,
     );
   }
@@ -164,8 +164,8 @@ export class Sidebar implements UiComponent {
         this.emptyText,
         filtering && total > 0
           ? this.query.trim()
-            ? tr('Nenhum agente encontrado para “{0}”.', [this.query.trim()])
-            : tr('Nenhum agente nas contas selecionadas.')
+            ? tr('Nenhum operador encontrado para “{0}”.', [this.query.trim()])
+            : tr('Nenhum operador nas equipes selecionadas.')
           : tr('Nenhuma sessão aberta no momento.'),
       );
       setHidden(this.clearBtn, !(filtering && total > 0));
@@ -200,7 +200,7 @@ export class Sidebar implements UiComponent {
     const count = h('span', { class: 'ui-room__count' });
     const accsEl = h('span', { class: 'ui-room__accs' });
     const path = h('span', { class: 'ui-room__path' });
-    const tasksBar = createProgress(tr('Progresso das tarefas da sala'));
+    const tasksBar = createProgress(tr('Progresso dos objetivos da zona'));
     const tasksText = h('span', { class: 'ui-room__tasks-text' });
     const tasks = h('span', { class: 'ui-room__tasks' }, tasksBar, tasksText);
     const swatch = h('span', { class: 'ui-room__swatch', attrs: { 'aria-hidden': 'true' } });
@@ -249,10 +249,10 @@ export class Sidebar implements UiComponent {
     setText(r.name, g.room.name);
     const present = g.agents.filter((a) => a.status !== 'offline').length;
     setText(r.count, String(present));
-    setTitle(r.count, plural(present, tr('agente'), tr('agentes')));
+    setTitle(r.count, plural(present, tr('operador'), tr('operadores')));
     setText(r.path, shortPath(g.room.path));
-    setTitle(r.head, tr('{0}\nClique para ver a sala', [g.room.path]));
-    setAttr(r.head, 'aria-label', tr('Sala {0}, {1}', [g.room.name, plural(present, tr('agente'), tr('agentes'))]));
+    setTitle(r.head, tr('{0}\nClique para ver a zona', [g.room.path]));
+    setAttr(r.head, 'aria-label', tr('Zona {0}, {1}', [g.room.name, plural(present, tr('operador'), tr('operadores'))]));
     r.accs.sync(g.accounts.map((id) => this.ctx.account(id) ?? id));
     const selected = sel?.type === 'room' && sel.id === g.room.id;
     r.head.classList.toggle('is-selected', selected);
@@ -263,7 +263,7 @@ export class Sidebar implements UiComponent {
     setHidden(r.tasks, t.total === 0);
     if (t.total > 0) {
       updateProgress(r.tasksBar, t.completed, t.total, t.inProgress);
-      setText(r.tasksText, tr('{0}/{1} tarefas', [t.completed, t.total]));
+      setText(r.tasksText, tr('{0}/{1} objetivos', [t.completed, t.total]));
     }
     // Ordem escolhida pelo usuário (arrastando as linhas), guardada no navegador.
     const ordered = orderAgents(g.room.id, g.nodes, (n) => n.agent.sessionId);
@@ -406,7 +406,7 @@ export class Sidebar implements UiComponent {
     setHidden(r.subsWrap, !has);
     if (has) {
       const shown = n.subs.length;
-      setText(r.subsCaption, shown === n.subTotal ? plural(n.subTotal, tr('subagente'), tr('subagentes')) : `${shown} de ${plural(n.subTotal, tr('subagente'), tr('subagentes'))}`);
+      setText(r.subsCaption, shown === n.subTotal ? plural(n.subTotal, tr('reforço'), tr('reforços')) : `${shown} de ${plural(n.subTotal, tr('reforço'), tr('reforços'))}`);
     }
     r.subs.sync(n.subs);
   }

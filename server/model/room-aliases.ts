@@ -26,7 +26,7 @@ export class RoomAliases {
       const j = JSON.parse(readFileSync(this.file, 'utf8')) as { aliases?: Record<string, unknown> };
       for (const [k, v] of Object.entries(j.aliases ?? {})) if (typeof v === 'string' && v.trim()) this.aliases.set(pathKey(k), v.trim().slice(0, ROOM_NAME_MAX));
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') log.warn(tr('rooms.json ilegível ({0}); sem nomes de sala personalizados.', [errMsg(err)]));
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') log.warn(tr('rooms.json ilegível ({0}); sem nomes de zona personalizados.', [errMsg(err)]));
     }
   }
 

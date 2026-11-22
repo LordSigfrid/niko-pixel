@@ -5,12 +5,12 @@ import { formatElapsed, normalizeSearch } from './format';
 import { tr } from '../../../shared/i18n';
 
 export const STATUS_LABEL: Record<AgentStatus, string> = {
-  working: tr('Trabalhando'),
-  waiting: tr('Precisa de você'),
-  shell: tr('Esperando o shell'),
-  idle: tr('Ocioso'),
-  done: tr('Concluído'),
-  offline: tr('Saindo'),
+  working: tr('Em ação'),
+  waiting: tr('Aguardando ordem'),
+  shell: tr('Segurando posição'),
+  idle: tr('De prontidão'),
+  done: tr('Objetivo concluído'),
+  offline: tr('Fora de combate'),
 };
 
 /** Ordem de urgência (menor = mais urgente), usada para destacar quem precisa de atenção. */
@@ -24,24 +24,24 @@ export function statusLabel(status: AgentStatus): string {
 export function activityFallback(agent: Pick<AgentInfo, 'status' | 'waitingFor'>): string {
   switch (agent.status) {
     case 'working':
-      return tr('Trabalhando…');
+      return tr('Em ação…');
     case 'waiting':
-      return agent.waitingFor ? tr('Precisa de você: {0}', [agent.waitingFor]) : tr('Precisa de você');
+      return agent.waitingFor ? tr('Aguardando ordem: {0}', [agent.waitingFor]) : tr('Aguardando ordem');
     case 'shell':
-      return tr('Esperando o shell terminar');
+      return tr('Segurando posição até o shell terminar');
     case 'done':
-      return tr('Concluiu a tarefa');
+      return tr('Cumpriu o objetivo');
     case 'offline':
-      return tr('Saindo do escritório');
+      return tr('Saindo do quartel-general');
     default:
-      return tr('Aguardando instruções');
+      return tr('De prontidão, aguardando ordens');
   }
 }
 
 /** Selo de papel: "Agente principal" ou o tipo do subagente ("Explore", "Plan"...). */
 export function roleLabel(agent: Pick<AgentInfo, 'kind' | 'role'>): string {
-  if (agent.kind === 'main') return agent.role || tr('Agente principal');
-  return agent.role || tr('Subagente');
+  if (agent.kind === 'main') return agent.role || tr('Líder');
+  return agent.role || tr('Reforço');
 }
 
 /** Agente ainda "presente" (não está indo embora). */
@@ -193,7 +193,7 @@ export interface ShellLine {
 
 /** Linha de atividade de quem espera um shell: "⏳ <label> · <tempo>" (e "×N" se vários). */
 export function shellLine(wait: ShellWait, now: number): ShellLine {
-  const label = wait.main?.label?.trim() || (wait.foreground ? tr('Esperando o comando terminar') : tr('Esperando o shell terminar'));
+  const label = wait.main?.label?.trim() || (wait.foreground ? tr('Esperando o comando terminar') : tr('Segurando posição até o shell terminar'));
   const time = formatElapsed(now - wait.since);
   const n = wait.jobs.length;
   const count = n > 1 ? `×${n}` : '';
@@ -205,8 +205,8 @@ export function shellBoxText(wait: Pick<ShellWait, 'foreground' | 'jobs'>): stri
   if (wait.foreground) return tr('Está parado num comando no terminal, esperando ele terminar para continuar o turno.');
   const n = wait.jobs.length;
   return n > 1
-    ? tr('Terminou o turno e está esperando {0} shells terminarem. A cada um que termina, o agente recebe o resultado.', [n])
-    : tr('Terminou o turno e está esperando o shell terminar. Quando ele terminar, o agente recebe o resultado.');
+    ? tr('Terminou o turno e está esperando {0} shells terminarem. A cada um que termina, o operador recebe o resultado.', [n])
+    : tr('Terminou o turno e está esperando o shell terminar. Quando ele terminar, o operador recebe o resultado.');
 }
 
 export type ShellStage = 'popcorn' | 'spin' | 'cobweb' | 'nap';

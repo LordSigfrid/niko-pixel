@@ -4,11 +4,11 @@
 import { mulberry32 } from '../../../../shared/hash';
 import { IDLE_WEIGHTS, type IdleActivity } from '../sim/behavior';
 import { tr } from '../../../../shared/i18n';
-import { TRAIT_IDS, traitsClash, type TraitId } from '../../../../shared/world/traits';
+import { TRAIT_IDS, traitsClash, type TraitId } from '../../../../shared/traits';
 
-// Os ids, os rótulos e os pares que não combinam ficam em shared/world/traits.ts (os mesmos do jogador do Habblaud
+// Os ids, os rótulos e os pares que não combinam ficam em shared/traits.ts ;
 // World); re-exportados aqui para quem já importava deste módulo.
-export { TRAIT_IDS, TRAITS, type Trait, type TraitId } from '../../../../shared/world/traits';
+export { TRAIT_IDS, TRAITS, type Trait, type TraitId } from '../../../../shared/traits';
 
 /** Bordões: cada um tem o seu (aparece de vez em quando nas falas). */
 export const CATCHPHRASES = [

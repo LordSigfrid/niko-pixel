@@ -1,0 +1,4 @@
+{
+  "description": "Módulo de hooks do mod do Niko-Pixel (uso do plano, aviso embaixo do prompt e /niko-pixel)",
+  "modules": ["./register.ts"]
+}

@@ -9,6 +9,8 @@ import {
   papers, pencilCup, photoFrame, pick, pot, rngOf, smallSucculent, staticScreen, topFace, underRect, woodGrain,
   type DeskItemTone,
 } from './kit';
+import { TACTICAL_THEME } from '../theme';
+import * as Tac from './tactical-office';
 
 type Box = { x: number; y: number; w: number; h: number };
 
@@ -157,6 +159,7 @@ function itemTone(variant: string | undefined): DeskItemTone {
 }
 
 export function desk(variant: string | undefined, seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.desk(variant, seed);
   const s = floorSheet(2, 1, 20);
   const m = deskMats(variant);
   deskBody(s, m, seed, false);
@@ -169,6 +172,7 @@ export function desk(variant: string | undefined, seed: number): BufFurniture {
 }
 
 export function deskBack(variant: string | undefined, seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.deskBack(variant, seed);
   const s = floorSheet(2, 1, 12);
   const m = deskMats(variant);
   const b = s.buf;
@@ -224,6 +228,7 @@ function starBase(b: BufSprite['buf']): void {
 }
 
 export function officeChair(variant: string | undefined): BufFurniture {
+  if (TACTICAL_THEME) return Tac.officeChair(variant);
   const c = chairRamp(variant);
   // Base: assento visto por trás + base estrela (o encosto fica no `front`).
   const base = floorSheet(1, 1, 6);
@@ -256,6 +261,7 @@ export function officeChair(variant: string | undefined): BufFurniture {
 }
 
 export function officeChairFront(variant: string | undefined): BufFurniture {
+  if (TACTICAL_THEME) return Tac.officeChairFront(variant);
   const c = chairRamp(variant);
   const s = floorSheet(1, 1, 10);
   const b = s.buf;
@@ -285,6 +291,7 @@ export function officeChairFront(variant: string | undefined): BufFurniture {
 // ------------------------------------------------------------------ estantes e arquivos
 
 export function bookshelf(seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.bookshelf(seed);
   const s = floorSheet(2, 1, 22);
   const b = s.buf;
   const w = M.oak;
@@ -353,6 +360,7 @@ export function bookshelf(seed: number): BufFurniture {
 }
 
 export function binderShelf(seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.binderShelf(seed);
   const s = floorSheet(1, 1, 22);
   const b = s.buf;
   const w = ramp('#ecebe6', 0.05);
@@ -401,6 +409,7 @@ export function binderShelf(seed: number): BufFurniture {
 }
 
 export function filingCabinet(): BufFurniture {
+  if (TACTICAL_THEME) return Tac.filingCabinet();
   const s = floorSheet(1, 1, 8);
   const b = s.buf;
   const m = ramp('#c3c9d2', 0.06);
@@ -424,6 +433,7 @@ export function filingCabinet(): BufFurniture {
 }
 
 export function printer(): BufFurniture {
+  if (TACTICAL_THEME) return Tac.printer();
   const s = floorSheet(1, 1, 14);
   const b = s.buf;
   const body = ramp('#dfe2e7', 0.05);
@@ -454,6 +464,7 @@ export function printer(): BufFurniture {
 }
 
 export function trashBin(): BufFurniture {
+  if (TACTICAL_THEME) return Tac.trashBin();
   const s = floorSheet(1, 1, 2);
   const b = s.buf;
   const m = ramp('#8a96a8', 0.07);
@@ -479,6 +490,7 @@ export function trashBin(): BufFurniture {
 // ------------------------------------------------------------------ plantas
 
 export function plantSmall(variant: string | undefined, seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.plantSmall(variant, seed);
   const s = floorSheet(1, 1, 10);
   const b = s.buf;
   const v = variant ?? 'fern';
@@ -518,6 +530,7 @@ export function plantSmall(variant: string | undefined, seed: number): BufFurnit
 }
 
 export function plantTall(variant: string | undefined, seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.plantTall(variant, seed);
   const s = floorSheet(1, 1, 24, 6);
   const b = s.buf;
   const v = variant ?? 'ficus';
@@ -591,6 +604,7 @@ export function plantTall(variant: string | undefined, seed: number): BufFurnitu
 // ------------------------------------------------------------------ divisórias de vidro
 
 export function glassPartition(variant: string | undefined): BufFurniture {
+  if (TACTICAL_THEME) return Tac.glassPartition(variant);
   const v = variant ?? 'h';
   const s = floorSheet(1, 1, 22, 2);
   const b = s.buf;
@@ -651,6 +665,7 @@ export function glassPartition(variant: string | undefined): BufFurniture {
 // ------------------------------------------------------------------ reunião e apoio
 
 export function meetingTable(seed: number): BufFurniture {
+  if (TACTICAL_THEME) return Tac.meetingTable(seed);
   const s = floorSheet(3, 2, 10);
   const b = s.buf;
   const m = M.white;
@@ -706,6 +721,7 @@ export function meetingTable(seed: number): BufFurniture {
 }
 
 export function stool(): BufFurniture {
+  if (TACTICAL_THEME) return Tac.stool();
   const s = floorSheet(1, 1, 2);
   const b = s.buf;
   // Base e haste.
@@ -725,6 +741,7 @@ export function stool(): BufFurniture {
 }
 
 export function floorLamp(): BufFurniture {
+  if (TACTICAL_THEME) return Tac.floorLamp();
   const s = floorSheet(1, 1, 26);
   const b = s.buf;
   b.ellipse(8, 14, 4, 1.5, '#3a3f4b');
@@ -748,6 +765,7 @@ export function floorLamp(): BufFurniture {
 }
 
 export function waterCooler(): BufFurniture {
+  if (TACTICAL_THEME) return Tac.waterCooler();
   const s = floorSheet(1, 1, 20);
   const b = s.buf;
   const body = ramp('#eceef1', 0.05);

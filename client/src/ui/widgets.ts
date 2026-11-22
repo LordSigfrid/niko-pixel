@@ -28,7 +28,7 @@ export function updateAccountChip(chip: HTMLElement, account: AccountInfo | unde
 
 /** Selo de texto "Codex" ao lado do nome da conta (onde há espaço: gaveta, terminal, cartão de uso, dica). */
 export function createProviderTag(extra = ''): HTMLElement {
-  return h('span', { class: `ui-prov${extra ? ` ${extra}` : ''}`, text: 'Codex', hidden: true, title: tr('Agente do Codex (OpenAI)') });
+  return h('span', { class: `ui-prov${extra ? ` ${extra}` : ''}`, text: 'Codex', hidden: true, title: tr('Operador do Codex (OpenAI)') });
 }
 
 /** Mostra o selo só para o Codex (e não repete quando o nome da conta já diz "Codex"). */
@@ -53,9 +53,9 @@ export function createRoleBadge(): HTMLElement {
 }
 
 export function updateRoleBadge(badge: HTMLElement, agent: Pick<AgentInfo, 'kind' | 'role' | 'background'>): void {
-  setText(badge, agent.kind === 'main' ? tr('Principal') : agent.role || tr('Subagente'));
+  setText(badge, agent.kind === 'main' ? tr('Principal') : agent.role || tr('Reforço'));
   setVariant(badge, 'ui-role--', agent.kind);
-  setTitle(badge, agent.kind === 'main' ? tr('Agente principal') : tr('Subagente: {0}{1}', [agent.role, agent.background ? tr(' (em segundo plano)') : '']));
+  setTitle(badge, agent.kind === 'main' ? tr('Líder') : tr('Reforço: {0}{1}', [agent.role, agent.background ? tr(' (em segundo plano)') : '']));
 }
 
 /** Barra de progresso fina; `value` 0–1. */
@@ -133,6 +133,6 @@ export function updateShellActivityLine(el: HTMLElement, wait: ShellWait, now: n
 export function wordmark(cls = 'ui-brand__name'): HTMLElement {
   const el = h('span', { class: cls });
   el.innerHTML = WORDMARK;
-  el.append(h('span', { class: 'ui-sr', text: 'Habblaud' }));
+  el.append(h('span', { class: 'ui-sr', text: 'Niko-Pixel' }));
   return el;
 }

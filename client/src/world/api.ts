@@ -2,6 +2,8 @@
 // Implementação: client/src/world/index.ts -> createWorld().
 // Regra: mudanças aqui devem ser ADITIVAS.
 
+import { TACTICAL_THEME } from '../art/theme';
+
 export type Selection = { type: 'agent'; id: string } | { type: 'room'; id: string } | null;
 
 export interface WorldOptions {
@@ -31,6 +33,8 @@ export type OfficeTheme = 'auto' | SeasonalTheme;
  */
 export function seasonalThemeFor(theme: OfficeTheme | undefined, date: Date): SeasonalTheme {
   if (theme && theme !== 'auto') return theme;
+  // O tema tático já tem identidade própria: no automático, nada de Natal/Halloween por cima.
+  if (TACTICAL_THEME) return 'none';
   const month = date.getMonth();
   if (month === 9) return 'halloween';
   if (month === 10 || (month === 11 && date.getDate() <= 26)) return 'christmas';
@@ -93,11 +97,6 @@ export interface WorldApi {
   setPlayback?(p: WorldPlayback | null): void;
   /** (Opcional, aditivo) Sons do ambiente: teclado de quem trabalha à vista, elevador, rodas. */
   onSound?(cb: (cue: SoundCue) => void): () => void;
-  /**
-   * (Opcional, aditivo) Escritório fora da tela (a cena da cidade está aberta): para o desenho e o teclado da
-   * câmera; ao voltar, a simulação avança o tempo que passou (como com a aba em segundo plano).
-   */
-  setSuspended?(suspended: boolean): void;
   destroy(): void;
 }
 

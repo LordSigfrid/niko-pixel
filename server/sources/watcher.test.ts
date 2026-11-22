@@ -136,7 +136,7 @@ describe('ClaudeWatcher', () => {
     c.openSession(100, 'sess-a', { status: 'waiting', waitingFor: 'permission' });
     c.poll();
     expect(c.agent(id)).toMatchObject({ status: 'waiting', waitingFor: 'aprovar uma permissão' });
-    expect(c.notices.at(-1)?.text).toMatch(/^✋ .+ precisa de você em loja: aprovar uma permissão$/);
+    expect(c.notices.at(-1)?.text).toMatch(/^✋ .+ aguarda sua ordem em loja: aprovar uma permissão$/);
     c.openSession(100, 'sess-a', { status: 'busy' });
     c.poll();
     c.openSession(100, 'sess-a', { status: 'idle' });
@@ -203,7 +203,7 @@ describe('ClaudeWatcher', () => {
         'Prompt anterior', 'Prompt posterior',
       ]);
       expect(c.agent(id)!.activity?.detail).toBe('Prompt posterior');
-      expect(warn).toHaveBeenCalledWith(`[habblaud] Linha do transcript de ${id} ignorada: Cannot convert object to primitive value`);
+      expect(warn).toHaveBeenCalledWith(`[niko-pixel] Linha do transcript de ${id} ignorada: Cannot convert object to primitive value`);
       expect(warn).toHaveBeenCalledTimes(1);
     } finally {
       setQuiet(true);
@@ -460,8 +460,8 @@ describe('ClaudeWatcher', () => {
     const a = c.agent('.claude:300')!;
     expect(a.role).toBe('Agente frinus');
     const texts = c.notices.map((n) => n.text);
-    expect(texts).toContain('🏗️ Nova sala: loja');
-    expect(texts).toContain(`👋 ${a.name} chegou em loja (Conta A)`);
+    expect(texts).toContain('🏗️ Nova zona: loja');
+    expect(texts).toContain(`👋 ${a.name} chegou em loja (Equipe A)`);
   });
 });
 

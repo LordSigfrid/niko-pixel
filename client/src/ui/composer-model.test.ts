@@ -49,7 +49,7 @@ describe('caixa de mensagem (peças puras)', () => {
     for (const status of ['working', 'waiting', 'shell'] as const) expect(composerMode(agent({ status }), ON).kind).toBe('ready');
     // Recurso ligado, mas a sessão sem o plugin: a dica de instalação.
     expect(composerMode(agent({ canMessage: undefined }), ON)).toEqual({ kind: 'hint', text: PLUGIN_HINT });
-    expect(PLUGIN_HINT).toBe('Para mandar mensagens daqui: npm run mod:install (plugin habblaud-mensagens)');
+    expect(PLUGIN_HINT).toBe('Para mandar mensagens daqui: npm run mod:install (plugin niko-pixel-mensagens)');
   });
 
   it('composerMode: quando não dá, diz por quê (a gaveta esconde, o terminal mostra o motivo)', () => {
@@ -58,8 +58,8 @@ describe('caixa de mensagem (peças puras)', () => {
       expect(m.kind).toBe('off');
       return m.kind === 'off' ? m.text : '';
     };
-    expect(off(agent({ kind: 'sub', parentId: 'acc:1' }))).toMatch(/^Subagentes não recebem/);
-    expect(off(agent({ kind: 'sub', status: 'done' }))).toMatch(/^Subagentes/);
+    expect(off(agent({ kind: 'sub', parentId: 'acc:1' }))).toMatch(/^Reforços não recebem/);
+    expect(off(agent({ kind: 'sub', status: 'done' }))).toMatch(/^Reforços/);
     expect(off(agent({ status: 'offline' }))).toBe('Sessão encerrada');
     expect(off(undefined)).toBe('Sessão encerrada');
     expect(off(agent(), { enabled: false })).toMatch(/terminal do Claude Code/);
@@ -93,7 +93,7 @@ describe('caixa de mensagem (peças puras)', () => {
     expect(sendStatusText({ phase: 'sending', at: 0 }, 0)).toBe('Enviando…');
     expect(sendStatusText({ phase: 'queued', at: 0 }, 0)).toMatch(/^Na fila/);
     expect(sendStatusText({ phase: 'sent', at: 0 }, 0)).toMatch(/^Entregando/);
-    expect(sendStatusText({ phase: 'delivered', at: 0 }, 1_000)).toMatch(/^Entregue ✓ \(se o agente estiver ocupado, entra quando ele terminar\)$/);
+    expect(sendStatusText({ phase: 'delivered', at: 0 }, 1_000)).toMatch(/^Entregue ✓ \(se o operador estiver ocupado, entra quando ele terminar\)$/);
     expect(sendStatusText({ phase: 'delivered', at: 0 }, DELIVERED_SHOW_MS)).toBe('');
     expect(sendStatusText({ phase: 'rejected', error: 'já há 5 mensagens', at: 0 }, 0)).toBe('Não foi possível mandar: já há 5 mensagens');
     expect(sendStatusText({ phase: 'failed', error: 'a sessão não confirmou a entrega', at: 0 }, 99_999)).toBe('Não foi entregue: a sessão não confirmou a entrega');
@@ -105,7 +105,7 @@ describe('caixa de mensagem (peças puras)', () => {
     const codex = (over: Partial<AgentInfo> = {}) => agent({ provider: 'codex', ...over });
     expect(composerMode(codex(), ON)).toEqual({ kind: 'ready' });
     expect(composerMode(codex({ canMessage: undefined }), ON)).toEqual({ kind: 'hint', text: CODEX_BRIDGE_HINT });
-    expect(CODEX_BRIDGE_HINT).toBe('Para mandar mensagens ao Codex: com o Habblaud no Docker, deixe npm run codex:bridge rodando; no modo Node funciona sozinho');
+    expect(CODEX_BRIDGE_HINT).toBe('Para mandar mensagens ao Codex: com o Niko-Pixel no Docker, deixe npm run codex:bridge rodando; no modo Node funciona sozinho');
     expect(composerMode(codex(), { ...ON, enabled: false })).toEqual({ kind: 'off', text: 'Para responder, use o Codex' });
     expect(composerMode(codex({ kind: 'sub', parentId: 'acc:1' }), ON).kind).toBe('off');
     expect(composerMode(codex({ status: 'offline' }), ON)).toEqual({ kind: 'off', text: 'Sessão encerrada' });

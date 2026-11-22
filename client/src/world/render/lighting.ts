@@ -8,7 +8,8 @@
 import { TILE, type ArtModule, type ScreenMode } from '../../art/api';
 import { mulberry32 } from '../../../../shared/hash';
 import { BUILDING_H, COL_W, CORRIDOR_H, CORRIDOR_Y } from '../constants';
-import type { ExteriorLayout, SlotShell } from '../layout/exterior';
+import { lampFlicker, type ExteriorLayout, type SlotShell } from '../layout/exterior';
+import { HELI } from './war-art';
 import type { RoomState } from '../sim/room-state';
 import type { Sim } from '../sim/sim';
 import { buildAnim } from './anim';
@@ -36,7 +37,11 @@ export interface LightScene {
   readonly exterior: ExteriorLayout;
   readonly shells: readonly SlotShell[];
   readonly shellWindows: readonly WallVis[];
-  readonly cars: readonly { x: number; y: number; dir: 1 | -1 }[];
+  /** Veículos: `front`/`back` = px da âncora até faróis/lanternas, `ly` = altura deles, `lights` = tamanho do facho. */
+  readonly cars: readonly { x: number; y: number; dir: 1 | -1; front?: number; back?: number; ly?: number; lights?: number }[];
+  /** Helicópteros (tema tático): chão sob ele em `y`, desenhado em heliTop(). */
+  readonly helis?: readonly { x: number; y: number; alt: number; dir: 1 | -1; phase: number }[];
+  heliTop?(h: { y: number; alt: number; phase: number }, now: number): number;
   roomInSlot(slot: number): RoomState | undefined;
   deskScreen(f: FurnVis, area: AreaVis): ScreenMode;
 }
@@ -407,8 +412,11 @@ export class Lighting {
     }
     for (const prop of scene.exterior.props) {
       if (prop.kind === 'lamp') {
-        halo(street, prop.x, prop.y + 6, 120, 84, k);
-        halo(street, prop.x, prop.y - 30, 30, 24, 0.7 * k);
+        // poste atingido não ilumina; o que pisca entra fraco no mapa (a piscada é um brilho por frame)
+        if (prop.lamp === 'off') continue;
+        const lk = prop.lamp === 'flicker' ? 0.45 * k : k;
+        halo(street, prop.x, prop.y + 6, 120, 84, lk);
+        halo(street, prop.x, prop.y - 30, 30, 24, 0.7 * lk);
       } else if (prop.kind === 'totem') halo(cool, prop.x, prop.y - 4, 34, 22, 0.6 * k);
     }
     this.paintWindowSpill(scene, lit, k, halo, street);
@@ -497,13 +505,19 @@ export class Lighting {
     this.drawSunbeams(ctx, scene, view);
     if (n > 0.2) {
       for (const prop of scene.exterior.props) {
-        if (prop.kind !== 'lamp' || !inView(prop.x, prop.y, 64)) continue;
-        ctx.globalAlpha = 0.6 * n;
+        if (prop.kind !== 'lamp' || prop.lamp === 'off' || !inView(prop.x, prop.y, 64)) continue;
+        const lv = prop.lamp === 'flicker' ? lampFlicker(prop.seed, now) : 1;
+        ctx.globalAlpha = 0.6 * n * lv;
         ctx.drawImage(warm, Math.round(prop.x - 14), Math.round(prop.y - 43), 28, 28);
+        if (prop.lamp === 'flicker' && lv > 0.5) {
+          ctx.globalAlpha = 0.22 * n * lv;
+          ctx.drawImage(warm, Math.round(prop.x - 34), Math.round(prop.y - 12), 68, 36);
+        }
       }
       this.drawHeadlights(ctx, scene, view, n);
       if (n > 0.6 && !this.reduced) this.drawFireflies(ctx, scene, view, now, (n - 0.6) / 0.4);
     }
+    this.drawHeliLights(ctx, scene, view, now, n);
     ctx.restore();
   }
 
@@ -575,11 +589,62 @@ export class Lighting {
     const tail = glowSprite('#ff4a3a', 16);
     for (const car of scene.cars) {
       if (car.x < view.x0 - 80 || car.x > view.x1 + 80 || car.y < view.y0 - 30 || car.y > view.y1 + 30) continue;
-      const front = car.x + car.dir * 16;
+      const k = car.lights ?? 1;
+      const ly = car.y - (car.ly ?? 7);
+      const front = car.x + car.dir * (car.front ?? 16);
+      const bw = Math.round(46 * k);
+      const bh = Math.max(8, Math.round(16 * k));
       ctx.globalAlpha = 0.55 * n;
-      ctx.drawImage(beam, Math.round(front + (car.dir > 0 ? 0 : -46)), Math.round(car.y - 15), 46, 16);
+      ctx.drawImage(beam, Math.round(front + (car.dir > 0 ? 0 : -bw)), Math.round(ly - bh / 2), bw, bh);
       ctx.globalAlpha = 0.8 * n;
-      ctx.drawImage(tail, Math.round(car.x - car.dir * 16 - 4), Math.round(car.y - 11), 8, 8);
+      ctx.drawImage(tail, Math.round(car.x - car.dir * (car.back ?? 16) - 4), Math.round(ly - 4), 8, 8);
+    }
+  }
+
+  /**
+   * Luzes do helicóptero: farol anticolisão vermelho piscando e luz verde de navegação (sempre,
+   * fracas de dia); à noite, um holofote em cone varrendo o chão sob ele.
+   */
+  private drawHeliLights(ctx: CanvasRenderingContext2D, scene: LightScene, view: View, now: number, n: number): void {
+    const helis = scene.helis;
+    if (!helis?.length || !scene.heliTop) return;
+    const red = glowSprite('#ff3a2e', 16);
+    const green = glowSprite('#46ff7a', 12);
+    const white = glowSprite('#fff6dc', 64);
+    const strength = 0.35 + 0.65 * n;
+    for (const h of helis) {
+      if (h.x < view.x0 - 120 || h.x > view.x1 + 120 || h.y < view.y0 - 120 || h.y > view.y1 + 80) continue;
+      const top = scene.heliTop(h, now);
+      const sx = (dx: number) => h.x + h.dir * dx;
+      const t = (now + h.phase) / 1000;
+      if (t % 1.1 < 0.14) {
+        ctx.globalAlpha = 0.95 * strength;
+        ctx.drawImage(red, Math.round(sx(HELI.beacon[0]) - 8), Math.round(top + HELI.beacon[1] - 8));
+      }
+      ctx.globalAlpha = 0.8 * strength;
+      ctx.drawImage(green, Math.round(sx(HELI.nav[0]) - 6), Math.round(top + HELI.nav[1] - 6));
+      if (n > 0.3 && !this.reduced) {
+        // holofote: cone do ventre até a mancha no chão, que varre um pouco à frente
+        const a = Math.min(1, (n - 0.3) / 0.4);
+        const lx = sx(HELI.search[0]);
+        const ly = top + HELI.search[1];
+        const gx = h.x + h.dir * 14 + Math.sin(t * 0.8) * 16;
+        const gy = h.y + 6 + Math.cos(t * 0.6) * 4;
+        const g = ctx.createLinearGradient(lx, ly, gx, gy);
+        g.addColorStop(0, 'rgba(255,246,220,0.35)');
+        g.addColorStop(1, 'rgba(255,246,220,0.08)');
+        ctx.globalAlpha = a;
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(lx - 1, ly);
+        ctx.lineTo(lx + 1, ly);
+        ctx.lineTo(gx + 20, gy);
+        ctx.lineTo(gx - 20, gy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.6 * a;
+        ctx.drawImage(white, Math.round(gx - 24), Math.round(gy - 10), 48, 20);
+      }
     }
   }
 

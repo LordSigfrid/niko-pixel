@@ -1,5 +1,6 @@
 // Núcleo do prédio (colunas 0 e 1): recepção com elevadores, banheiros, copa e lounge.
-import type { WallStyle } from '../../art/api';
+import type { FloorKind, WallStyle } from '../../art/api';
+import { TACTICAL_THEME } from '../../art/theme';
 import { COL_W, NORTH_Y, ROOM_H, SOUTH_Y, TILE } from '../constants';
 import { AreaBuilder, SEATED_SORT_BIAS } from './builder';
 import type { AreaLayout } from './types';
@@ -10,7 +11,7 @@ export const CAFE_ID = 'core:copa';
 export const LOUNGE_ID = 'core:lounge';
 
 /** Paredes do núcleo: tons claros e neutros (frios), com acabamentos diferentes por ambiente. */
-export const CORE_WALLS = {
+const OFFICE_WALLS = {
   reception: { base: '#e9e5dc', trim: '#a88e6c', pattern: 'wood_panel' } satisfies WallStyle,
   restroom: { base: '#dce8ee', trim: '#8fb0c0', pattern: 'tiles' } satisfies WallStyle,
   cafe: { base: '#eef0ee', trim: '#9aa6ad', pattern: 'plain' } satisfies WallStyle,
@@ -19,13 +20,28 @@ export const CORE_WALLS = {
   glass: { base: '#cfe6f0', trim: '#9fb9c6', pattern: 'glass' } satisfies WallStyle,
 };
 
+/** (Tema tático) Base de operações: blocos, contêineres e chapa. */
+const TACTICAL_WALLS: Record<keyof typeof OFFICE_WALLS, WallStyle> = {
+  reception: { base: '#9a9d96', trim: '#3a3d3b', pattern: 'cinder' },
+  restroom: { base: '#b9c0c2', trim: '#5d666b', pattern: 'tiles' },
+  cafe: { base: '#6b7350', trim: '#2f3520', pattern: 'corrugated' },
+  cafeSplash: { base: '#a7acaf', trim: '#5a6066', pattern: 'tiles' },
+  lounge: { base: '#7a6248', trim: '#3a2a20', pattern: 'corrugated' },
+  glass: { base: '#cfe6f0', trim: '#9fb9c6', pattern: 'glass' },
+};
+
+export const CORE_WALLS: Record<keyof typeof OFFICE_WALLS, WallStyle> = TACTICAL_THEME ? TACTICAL_WALLS : OFFICE_WALLS;
+
+/** Piso de cada ambiente do núcleo (o tema tático troca o acabamento de escritório). */
+const coreFloor = (office: FloorKind, tactical: FloorKind): FloorKind => (TACTICAL_THEME ? tactical : office);
+
 /** Centros (em tiles locais) dos dois elevadores na face norte da recepção. */
 export const ELEVATOR_CX = [3, 6.5] as const;
 
 export function layoutReception(): AreaLayout {
   const b = new AreaBuilder(RECEPTION_ID, 'reception', { x: 0, y: NORTH_Y, w: COL_W, h: ROOM_H });
   const wall = CORE_WALLS.reception;
-  b.floor('marble', 0, 0, 16, 12, 101);
+  b.floor(coreFloor('marble', 'bunker'), 0, 0, 16, 12, 101);
   b.rug(1.5, 2.2, 6.5, 2.6, '#3d5a80', 102);
   b.rug(8.6, 6.4, 5.2, 3.2, '#b65f3a', 103);
   b.face(0.5, 15, wall);
@@ -118,7 +134,7 @@ export function layoutRestroom(): AreaLayout {
 export function layoutCafe(): AreaLayout {
   const b = new AreaBuilder(CAFE_ID, 'cafe', { x: COL_W, y: NORTH_Y, w: COL_W, h: ROOM_H });
   const wall = CORE_WALLS.cafe;
-  b.floor('tile_check', 0, 0, 16, 12, 301);
+  b.floor(coreFloor('tile_check', 'plate'), 0, 0, 16, 12, 301);
   // frontão de mármore atrás da bancada + parede clara com janelas
   b.face(0.5, 9, CORE_WALLS.cafeSplash);
   b.face(9.5, 6, wall);

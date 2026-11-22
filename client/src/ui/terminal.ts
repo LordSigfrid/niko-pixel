@@ -1,7 +1,7 @@
 // Terminal: janela flutuante sobre o escritório com a conversa de uma sessão (prompts, respostas, ferramentas e
 // resultados) no formato em que o Claude Code a mostra, ao vivo pelo stream SSE GET /api/agents/:id/terminal (`init`
 // substitui tudo; `append` acrescenta). O rodapé tem a caixa de mensagem (ui/composer.ts): com o plugin
-// habblaud-mensagens, o que você digita ali entra na sessão do agente principal como se fosse digitado no terminal.
+// niko-pixel-mensagens, o que você digita ali entra na sessão do agente principal como se fosse digitado no terminal.
 // Também mostra as sessões do histórico (ui/history.ts), pelo mesmo protocolo em
 // GET /api/sessions/:conta/:sessionId/terminal: o cabeçalho traz projeto, título e data, e o rodapé, "Sessão encerrada às …".
 // Busca (Ctrl/⌘+F ou a lupa), filtro e o botão de copiar de cada entrada vêm de ui/termtools.ts.
@@ -47,8 +47,8 @@ export const INPUT_PREVIEW_LINES = 10;
 /** Prompt do usuário muito longo (texto colado): recolhido. */
 export const PROMPT_PREVIEW_LINES = 24;
 
-export const TERMINAL_UNAVAILABLE_HINT = tr('O terminal só fica disponível quando o Habblaud roda com acesso local (bind 127.0.0.1)');
-const OPEN_ERROR = tr('Não foi possível abrir o terminal. O recurso só funciona no acesso local, com o agente ainda aberto.');
+export const TERMINAL_UNAVAILABLE_HINT = tr('O terminal só fica disponível quando o Niko-Pixel roda com acesso local (bind 127.0.0.1)');
+const OPEN_ERROR = tr('Não foi possível abrir o terminal. O recurso só funciona no acesso local, com o operador ainda aberto.');
 const SESSION_OPEN_ERROR = tr('Não foi possível abrir a sessão. O histórico só funciona no acesso local, com o transcript ainda no disco.');
 /** Espera depois da última tecla antes de buscar (a busca percorre toda a conversa na tela). */
 const SEARCH_DEBOUNCE_MS = 120;
@@ -358,27 +358,27 @@ export interface TerminalFooter {
 /** Linha de estado do rodapé, imitando o Claude Code, a partir do agente vivo no snapshot. */
 export function terminalFooter(agent: AgentInfo | undefined, agents: readonly AgentInfo[], now: number): TerminalFooter {
   if (!agent || agent.status === 'offline') return { kind: 'ended', text: tr('Sessão encerrada') };
-  if (agent.status === 'done') return { kind: 'ended', text: tr('Subagente concluído · sessão encerrada') };
+  if (agent.status === 'done') return { kind: 'ended', text: tr('Reforço concluído · sessão encerrada') };
   const wait = shellWaitIn(agent, agents, now);
   if (wait) {
     const label = wait.main?.label?.trim();
     const more = wait.jobs.length > 1 ? ` (+${wait.jobs.length - 1})` : '';
-    return { kind: 'shell', text: label ? tr('Esperando o shell: {0}{1}', [label, more]) : tr('Esperando o shell terminar'), since: wait.since };
+    return { kind: 'shell', text: label ? tr('Segurando posição (shell): {0}{1}', [label, more]) : tr('Segurando posição até o shell terminar'), since: wait.since };
   }
   switch (agent.status) {
     case 'working': {
       const act = agent.activity?.text?.trim().replace(/(?:…|\.{1,3})$/, '');
-      return { kind: 'working', text: `${act || tr('Trabalhando')}…`, since: agent.statusSince };
+      return { kind: 'working', text: `${act || tr('Em ação')}…`, since: agent.statusSince };
     }
     case 'waiting': {
-      const text = agent.waitingFor ? tr('Esperando você: {0}', [agent.waitingFor]) : tr('Esperando você');
+      const text = agent.waitingFor ? tr('Aguardando ordem: {0}', [agent.waitingFor]) : tr('Aguardando ordem');
       if (agent.permission) return { kind: 'waiting', text, since: agent.statusSince };
-      // Sem o pedido no Habblaud (o hook já devolveu à sessão, a sessão abriu sem o plugin ou não havia página aberta
+      // Sem o pedido no Niko-Pixel (o hook já devolveu à sessão, a sessão abriu sem o plugin ou não havia página aberta
       // quando ele chegou): os botões não vêm, então diz onde responder.
       const hint =
         agent.provider === 'codex'
-          ? tr('{0} · responda no Codex: este pedido não chegou ao Habblaud ou passou do tempo de espera', [text])
-          : tr('{0} · responda no Claude Code: este pedido não chegou ao Habblaud ou passou do tempo de espera', [text]);
+          ? tr('{0} · responda no Codex: este pedido não chegou ao Niko-Pixel ou passou do tempo de espera', [text])
+          : tr('{0} · responda no Claude Code: este pedido não chegou ao Niko-Pixel ou passou do tempo de espera', [text]);
       return { kind: 'waiting', text: hint, since: agent.statusSince };
     }
     default:
@@ -759,7 +759,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     );
     this.el.addEventListener('keydown', (e) => this.onKey(e));
     // Arrastar pela barra solta a janela (ui/movable.ts).
-    this.movable = new Movable(this.el, bar, { key: 'habblaud.move.term', enabled: () => !ctx.isNarrow() });
+    this.movable = new Movable(this.el, bar, { key: 'niko-pixel.move.term', enabled: () => !ctx.isNarrow() });
     this.renderFilter();
     // Janela redimensionada: quem está no fim continua vendo o fim.
     if (typeof ResizeObserver === 'function') new ResizeObserver(() => this.follow && this.scrollToEnd()).observe(this.scroll);
@@ -857,7 +857,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     const live = this.ctx.agent(this.id!);
     if (live) this.last = live;
     const a = this.last;
-    const name = a?.name ?? tr('Agente');
+    const name = a?.name ?? tr('Operador');
     setText(this.kindEl, 'terminal');
     setHidden(this.accEl, true);
     setText(this.nameEl, name);
@@ -867,7 +867,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
     setHidden(this.roleEl, !a);
     if (a) setVariant(this.roleEl, 'ui-role--', a.kind);
     const room = a ? this.ctx.store.room(a.roomId) : undefined;
-    setText(this.roomEl, room ? tr('sala {0}', [room.name]) : '');
+    setText(this.roomEl, room ? tr('zona {0}', [room.name]) : '');
     setTitle(this.roomEl, room?.path ?? '');
     setHidden(this.roomEl, !room);
     setAttr(this.el, 'aria-label', tr('Terminal de {0}', [name]));
@@ -877,7 +877,7 @@ export class TerminalPanel implements UiComponent, TerminalControl {
   /** Sessão do histórico: conta, título, projeto e a data de início. */
   private renderSessionHead(s: RecentSession): void {
     const title = s.title?.trim() || tr('Sessão sem título');
-    setText(this.kindEl, tr('histórico'));
+    setText(this.kindEl, tr('relatório'));
     updateAccountChip(this.accEl, this.ctx.account(s.account), s.account, s.provider);
     setHidden(this.accEl, false);
     setText(this.nameEl, title);

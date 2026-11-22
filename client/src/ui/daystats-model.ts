@@ -18,10 +18,10 @@ import { intlLocale, tr } from '../../../shared/i18n';
 
 /** Rótulos dos status no painel (o mesmo vocabulário do escritório, do ponto de vista de quem espera). */
 export const STATUS_TEXT: Record<TimedStatus, string> = {
-  waiting: tr('Esperando você'),
-  working: tr('Trabalhando'),
-  idle: tr('Ocioso'),
-  shell: tr('Esperando o shell'),
+  waiting: tr('Aguardando ordem'),
+  working: tr('Em ação'),
+  idle: tr('De prontidão'),
+  shell: tr('Segurando posição'),
 };
 
 /**
@@ -105,7 +105,7 @@ export function highlights(stats: DayStats, clock: (t: number) => string, codex 
     waits: t.waits ? plural(t.waits, tr('espera'), tr('esperas')) : t.ms.waiting > 0 ? tr('só esperas de poucos segundos') : tr('nenhuma espera'),
     working: formatAgentTime(t.ms.working),
     sessions: formatInt(t.sessions),
-    subagents: plural(t.subagents, tr('subagente'), tr('subagentes')),
+    subagents: plural(t.subagents, tr('reforço'), tr('reforços')),
     tokens: formatTokens(c.tokensIn + c.tokensOut),
     tokensDetail: tr('{0} entrada · {1} saída', [formatTokens(c.tokensIn), formatTokens(c.tokensOut)]),
     cost: c.costUSD > 0 ? formatUSD(c.costUSD) : '—',
@@ -120,7 +120,7 @@ export function highlights(stats: DayStats, clock: (t: number) => string, codex 
             : tr('Os transcripts não trouxeram o custo')
           : tr('Nenhum gasto registrado'),
     prompts: formatInt(c.prompts),
-    activity: `${plural(c.toolCalls, tr('ferramenta'), tr('ferramentas'))} · ${plural(c.tasksDone, tr('tarefa concluída'), tr('tarefas concluídas'))}`,
+    activity: `${plural(c.toolCalls, tr('ferramenta'), tr('ferramentas'))} · ${plural(c.tasksDone, tr('objetivo concluído'), tr('objetivos concluídos'))}`,
   };
 }
 
@@ -152,7 +152,7 @@ export function roomRows(rooms: readonly RoomDayStats[], visible: Visible): Room
         ms: r.ms,
         total,
         segments: segments(r.ms, visible, scale),
-        waiting: tr('{0} esperando você', [formatAgentTime(r.ms.waiting)]),
+        waiting: tr('{0} aguardando ordem', [formatAgentTime(r.ms.waiting)]),
         totalText: tr('{0} no total', [formatAgentTime(total)]),
         label: `${r.name}: ${statusSummary(r.ms, visible)}`,
       };

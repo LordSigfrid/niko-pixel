@@ -49,12 +49,12 @@ export interface ApiDeps {
   /**
    * Rotas das mensagens pelo escritório (/api/messages, a caixa de entrada do plugin em /api/mod/inbox e a do auxiliar
    * do Codex em /api/codex/bridge/*, server/messages/http.ts). Só existem com ServerConfig.messages (a trava do
-   * terminal e HABBLAUD_MENSAGENS); a trava do Host local é conferida aqui antes de chamá-las.
+   * terminal e NIKO_PIXEL_MENSAGENS); a trava do Host local é conferida aqui antes de chamá-las.
    */
   messages?: (req: IncomingMessage, res: ServerResponse, path: string) => void;
   /**
    * Terminal interativo e ações nos agentes (/api/pty/*, POST /api/agents/:id/stop|takeover; http/pty.ts).
-   * Ausente = desligado (sem HABBLAUD_PTY=1, Docker, sem node-pty ou sem bind local).
+   * Ausente = desligado (sem NIKO_PIXEL_PTY=1, Docker, sem node-pty ou sem bind local).
    */
   pty?: (req: IncomingMessage, res: ServerResponse, path: string) => void;
   /**
@@ -86,14 +86,9 @@ export interface ApiDeps {
   };
   /**
    * Porta remota com login (http/remote.ts): `is` diz se a requisição chegou por ela (já autenticada); `allows`, o que
-   * HABBLAUD_REMOTE_ALLOW libera. Requisição remota nunca vale pelo Host: só pelo que `allows` liberar.
+   * NIKO_PIXEL_REMOTE_ALLOW libera. Requisição remota nunca vale pelo Host: só pelo que `allows` liberar.
    */
   remote?: { is(req: IncomingMessage): boolean; allows(feature: RemoteFeature): boolean };
-  /**
-   * Rotas do Habblaud World (/api/world/*, server/world/http.ts). Ausente = HABBLAUD_WORLD=0: 404 em todas. Só pela porta
-   * local com Host local: pela porta do celular, nem com login (403 `local_only`).
-   */
-  world?: (req: IncomingMessage, res: ServerResponse, url: URL) => void;
 }
 
 /** GET /api/agents/:id/terminal (ids nunca contêm '/'). */
@@ -103,7 +98,7 @@ const AGENT_ACTION_ROUTE = /^\/api\/agents\/[^/]+\/(stop|takeover)$/;
 
 /** PUT|DELETE /api/agents/:id/character: personagem do projeto (ver Office.setCharacter). */
 const CHARACTER_ROUTE = /^\/api\/agents\/([^/]+)\/character$/;
-const NOT_EDITABLE = tr('agente não encontrado: só o agente principal de uma sessão aberta tem personagem editável');
+const NOT_EDITABLE = tr('operador não encontrado: só o líder de uma sessão aberta tem personagem editável');
 
 /** Conexão vinda do próprio computador (127.x, ::1 ou ::ffff:127.x). */
 function isLoopbackAddress(addr: string | undefined): boolean {
@@ -267,12 +262,12 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
   const isRemote = (req: IncomingMessage): boolean => !!deps.remote?.is(req);
   /**
    * A trava "pelo próprio computador": na porta local, o Host precisa ser loopback (como antes); na porta remota, só o
-   * que HABBLAUD_REMOTE_ALLOW liberar (`feature` ausente = nunca pela porta remota).
+   * que NIKO_PIXEL_REMOTE_ALLOW liberar (`feature` ausente = nunca pela porta remota).
    */
   const trusted = (req: IncomingMessage, feature?: RemoteFeature): boolean =>
     isRemote(req) ? !!feature && !!deps.remote?.allows(feature) : isLoopbackHost(req.headers.host);
   const denied = (req: IncomingMessage, localMessage: string): string =>
-    isRemote(req) ? tr('não liberado no acesso remoto (veja HABBLAUD_REMOTE_ALLOW)') : localMessage;
+    isRemote(req) ? tr('não liberado no acesso remoto (veja NIKO_PIXEL_REMOTE_ALLOW)') : localMessage;
 
   const methodNotAllowed = (res: ServerResponse, allow: string) => {
     res.setHeader('Allow', allow);
@@ -338,18 +333,6 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       sendJson(res, 403, { error: tr('rota só do próprio computador (hooks, plugins e o auxiliar do host)') });
       return true;
     }
-    if (path === '/api/world' || path.startsWith('/api/world/')) {
-      // A conta do Habblaud World age em seu nome: só o próprio computador, como o terminal. O Host local sozinho não
-      // basta (o Tailscale chega pelo loopback e o Host se imita): a porta remota nunca passa, nem com login.
-      if (!deps.world) {
-        req.resume();
-        sendJson(res, 404, { error: tr('rota desconhecida') });
-      } else if (isRemote(req) || !isLoopbackHost(req.headers.host)) {
-        req.resume();
-        sendJson(res, 403, { error: { code: 'local_only', message: tr('o Habblaud World só é usado pelo próprio computador (http://localhost)') } });
-      } else deps.world(req, res, url);
-      return true;
-    }
     if (path === '/api/stream') {
       if (method !== 'GET') methodNotAllowed(res, 'GET');
       else hub.attach(req, res);
@@ -398,7 +381,6 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
           messages: !!deps.messages && trusted(req, 'messages'),
           terminal: !!terminals && trusted(req, 'terminal'),
           spawn: !!deps.spawn && trusted(req, 'spawn'),
-          world: !!deps.world && !!deps.terminal && !remote && isLoopbackHost(req.headers.host),
         };
         sendJson(res, 200, access);
       }
@@ -417,7 +399,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     if (terminalMatch) {
       if (method !== 'GET') methodNotAllowed(res, 'GET');
       else if (!terminals) {
-        sendJson(res, 403, { error: tr('terminal desligado: ele só funciona com o Habblaud acessível apenas pelo próprio computador') });
+        sendJson(res, 403, { error: tr('terminal desligado: ele só funciona com o Niko-Pixel acessível apenas pelo próprio computador') });
       } else if (!trusted(req, 'terminal')) {
         sendJson(res, 403, { error: denied(req, tr('o terminal só abre pelo próprio computador (http://localhost ou http://127.0.0.1)')) });
       } else {
@@ -443,7 +425,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     if (path === '/api/permissions' || path.startsWith('/api/permissions/')) {
       // Responder pelo escritório age sobre as sessões: a mesma trava do terminal (bind local + Host local).
       if (!deps.permissions) {
-        sendJson(res, 403, { error: tr('responder pelo escritório desligado: só funciona com o Habblaud acessível apenas pelo próprio computador') });
+        sendJson(res, 403, { error: tr('responder pelo quartel-general desligado: só funciona com o Niko-Pixel acessível apenas pelo próprio computador') });
       } else if (!trusted(req, 'permissions')) {
         sendJson(res, 403, { error: denied(req, tr('pedidos de permissão só são respondidos pelo próprio computador (http://localhost ou http://127.0.0.1)')) });
       } else {
@@ -464,7 +446,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       // Mudar o personagem age sobre o escritório: a mesma trava do terminal (bind local + Host local).
       if (method !== 'PUT' && method !== 'DELETE') methodNotAllowed(res, 'PUT, DELETE');
       else if (!deps.terminal) {
-        sendJson(res, 403, { error: tr('editar o personagem desligado: só funciona com o Habblaud acessível apenas pelo próprio computador') });
+        sendJson(res, 403, { error: tr('editar o personagem desligado: só funciona com o Niko-Pixel acessível apenas pelo próprio computador') });
       } else if (!trusted(req)) {
         sendJson(res, 403, { error: denied(req, tr('o personagem só é editado pelo próprio computador (http://localhost ou http://127.0.0.1)')) });
       } else {
@@ -492,8 +474,8 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     if (path === '/api/spawn' || path.startsWith('/api/spawn/')) {
       // Abre uma sessão nova no app do Claude: roda código no computador, então a mesma trava das mensagens.
       const spawn = deps.spawn;
-      if (!spawn) sendJson(res, 403, { error: tr('novo agente pelo escritório desligado') });
-      else if (!trusted(req, 'spawn')) sendJson(res, 403, { error: denied(req, tr('agentes novos só são abertos pelo próprio computador (http://localhost)')) });
+      if (!spawn) sendJson(res, 403, { error: tr('novo operador pelo quartel-general desligado') });
+      else if (!trusted(req, 'spawn')) sendJson(res, 403, { error: denied(req, tr('operadores novos só são abertos pelo próprio computador (http://localhost)')) });
       else if (path === '/api/spawn' && isRead) sendJson(res, 200, { available: spawn.available(), mode: spawn.mode() });
       else if (path === '/api/spawn/folders') {
         if (!isRead) methodNotAllowed(res, 'GET');
@@ -616,7 +598,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       // Só o auxiliar do host, pela porta local (nunca pela remota); fora do Docker, só pelo loopback.
       const spawn = deps.spawn;
       if (method !== 'POST') methodNotAllowed(res, 'POST');
-      else if (!spawn) sendJson(res, 403, { error: tr('novo agente pelo escritório desligado') });
+      else if (!spawn) sendJson(res, 403, { error: tr('novo operador pelo quartel-general desligado') });
       else if (!trusted(req) || (!deps.inDocker && !isLoopbackAddress(req.socket.remoteAddress))) {
         sendJson(res, 403, { error: denied(req, tr('só o auxiliar do próprio computador')) });
       } else if (path === '/api/host/spawn/poll') {
@@ -636,7 +618,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       // As mensagens entram na sessão como se você as tivesse digitado: a mesma trava (recurso ligado + Host local).
       if (!deps.messages) {
         sendJson(res, 403, {
-          error: tr('mensagens pelo escritório desligadas: só funcionam com o Habblaud acessível apenas pelo próprio computador (e sem HABBLAUD_MENSAGENS=0)'),
+          error: tr('mensagens pelo quartel-general desligadas: só funcionam com o Niko-Pixel acessível apenas pelo próprio computador (e sem NIKO_PIXEL_MENSAGENS=0)'),
         });
       } else if (!trusted(req, 'messages')) {
         sendJson(res, 403, { error: denied(req, tr('mensagens só são mandadas pelo próprio computador (http://localhost ou http://127.0.0.1)')) });
@@ -659,21 +641,21 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
       }
       const detail = office.detail(id);
       if (detail) sendJson(res, 200, detail);
-      else sendJson(res, 404, { error: tr('agente não encontrado') });
+      else sendJson(res, 404, { error: tr('operador não encontrado') });
       return true;
     }
     if (path === '/api/rooms/rename') {
       // Como o personagem: a mesma trava do terminal (bind local + Host local).
       if (method !== 'POST') methodNotAllowed(res, 'POST');
-      else if (!deps.terminal) sendJson(res, 403, { error: tr('renomear salas desligado: só funciona com o Habblaud acessível apenas pelo próprio computador') });
-      else if (!trusted(req)) sendJson(res, 403, { error: denied(req, tr('renomear salas só pelo próprio computador (http://localhost)')) });
+      else if (!deps.terminal) sendJson(res, 403, { error: tr('renomear zonas desligado: só funciona com o Niko-Pixel acessível apenas pelo próprio computador') });
+      else if (!trusted(req)) sendJson(res, 403, { error: denied(req, tr('renomear zonas só pelo próprio computador (http://localhost)')) });
       else
         readJson(req)
           .then((body) => {
             const b = body as { id?: unknown; name?: unknown };
             if (typeof b?.id !== 'string' || typeof b.name !== 'string') throw new HttpError(400, tr('esperado {id, name}'));
             const name = deps.renameRoom?.(b.id, b.name);
-            if (name === undefined) throw new HttpError(404, tr('sala não encontrada'));
+            if (name === undefined) throw new HttpError(404, tr('zona não encontrada'));
             sendJson(res, 200, { name });
           })
           .catch((err) => fail(res, err));
@@ -686,7 +668,7 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
     if (path === '/api/demo') {
       // Liga o modo demonstração para todo mundo: só pelo computador (o celular com login só vê o que foi liberado).
       if (method !== 'POST') methodNotAllowed(res, 'POST');
-      else if (isRemote(req)) sendJson(res, 403, { error: tr('não liberado no acesso remoto (veja HABBLAUD_REMOTE_ALLOW)') });
+      else if (isRemote(req)) sendJson(res, 403, { error: tr('não liberado no acesso remoto (veja NIKO_PIXEL_REMOTE_ALLOW)') });
       else handleDemo(req, res).catch((err) => fail(res, err));
       return true;
     }

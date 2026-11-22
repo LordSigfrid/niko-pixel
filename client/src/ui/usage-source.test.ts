@@ -9,7 +9,7 @@ const win = { utilization: 42, resetsAt: 10 * 60 * MIN };
 
 describe('sourceLabel', () => {
   it('diz quem gravou o uso ao vivo', () => {
-    expect(sourceLabel({ source: 'statusline', via: 'mod', fetchedAt: 0 })).toBe('ao vivo (mod do Habblaud)');
+    expect(sourceLabel({ source: 'statusline', via: 'mod', fetchedAt: 0 })).toBe('ao vivo (mod do Niko-Pixel)');
     expect(sourceLabel({ source: 'statusline', via: 'tap', fetchedAt: 0 })).toBe('ao vivo (statusline do Claude Code)');
     expect(sourceLabel({ source: 'statusline', fetchedAt: 0 })).toBe('ao vivo (statusline do Claude Code)');
     expect(sourceLabel({ source: 'cache', fetchedAt: 0 })).toBe('cache do /usage do Claude Code');
@@ -22,7 +22,7 @@ describe('cartão de uso de uma conta do Codex', () => {
     const noQuota = codex({ usage: { source: 'codex', noQuota: true, fetchedAt: 0 } });
     expect(cardState(noQuota)).toBe('noquota');
     expect(usageMessage(noQuota)).toEqual(['sem cota', 'sem cota']);
-    expect(codexUsageNote(noQuota, 3 * MIN)).toMatch(/^Na última leitura \(há 3 min\), a conta estava sem cota nem créditos .*Não é 0%/);
+    expect(codexUsageNote(noQuota, 3 * MIN)).toMatch(/^Na última leitura \(há 3 min\), a equipe estava sem cota nem créditos .*Não é 0%/);
     expect(cardState(codex({ usage: { source: 'codex', fiveHour: win, fetchedAt: 0 } }))).toBe('ok');
     expect(cardState(codex({ usage: { source: 'codex', fiveHour: win, fetchedAt: 0 }, usageStatus: 'stale' }))).toBe('stale');
     expect(cardState(codex())).toBe('empty');

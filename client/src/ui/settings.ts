@@ -1,5 +1,4 @@
-// Configurações (popover): opções do escritório, avisos, modo demonstração e Sobre (versão). O Habblaud World tem a
-// janela própria (ui/world/world-dialog.ts); daqui só sai a dica do tema em Aparência, que também vai para o prédio.
+// Configurações (popover): opções do escritório, avisos, modo demonstração e Sobre (versão).
 import { access, remoteLogout } from '../net/access';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText } from './dom';
@@ -9,7 +8,6 @@ import type { UiPrefs } from './prefs';
 import { SoundSettingsGroup } from './settings-sound';
 import type { SoundControl } from './sound';
 import { AboutGroup } from './version';
-import type { WorldThemeLink } from './world/world-dialog';
 import { LOCALE_STORAGE_KEY, LOCALES, normalizeLocale, tr, type Locale } from '../../../shared/i18n';
 
 type LanguageChoice = 'auto' | Locale;
@@ -103,8 +101,6 @@ export class SettingsPopover implements UiComponent {
     private ctx: UiContext,
     private notifier: Notifier,
     sound: SoundControl,
-    /** A janela do Habblaud World: a dica do tema em Aparência e o envio do tema ao prédio. */
-    private readonly world: WorldThemeLink,
   ) {
     const sw = (key: BoolPref | 'demo', label: string, hint: string, onToggle: () => void) => {
       const r = switchRow(label, hint, onToggle);
@@ -123,7 +119,7 @@ export class SettingsPopover implements UiComponent {
       (v) => ctx.updatePrefs({ bubbles: v }),
     );
     this.liveliness = segmented<UiPrefs['liveliness']>(
-      tr('Movimento pelo escritório'),
+      tr('Movimento pelo quartel-general'),
       [
         ['calm', tr('Calmo')],
         ['normal', tr('Normal')],
@@ -142,13 +138,9 @@ export class SettingsPopover implements UiComponent {
     );
     this.daylight.row.append(h('span', { class: 'ui-set__hint', text: tr('Automático: céu, luzes e sol nas janelas seguem a hora local.') }));
     this.theme = segmented<UiPrefs['theme']>(
-      tr('Tema do escritório'),
+      tr('Tema do quartel-general'),
       [['auto', tr('Automático')], ['none', tr('Nenhum')], ['christmas', tr('Natal')], ['halloween', tr('Halloween')]],
-      (v) => {
-        ctx.updatePrefs({ theme: v });
-        // Com o World ligado e a conta aprovada, o tema também vai para o prédio (clicar de novo reenvia).
-        void this.world.onThemePicked(v);
-      },
+      (v) => ctx.updatePrefs({ theme: v }),
     );
     this.theme.row.append(h('span', { class: 'ui-set__hint', text: tr('Automático: Halloween em outubro e Natal de 1º de novembro a 26 de dezembro; no resto do ano, o visual original. Nenhum: sempre o original.') }));
     this.soundGroup = new SoundSettingsGroup(ctx, sound);
@@ -160,14 +152,14 @@ export class SettingsPopover implements UiComponent {
       (v) => pickLanguage(v),
     );
     this.language.row.append(
-      h('span', { class: 'ui-set__hint', text: tr('Os textos das atividades vêm do servidor: seguem HABBLAUD_LANG ou o idioma do sistema onde o Habblaud roda (o inglês, só com HABBLAUD_LANG=en).') }),
+      h('span', { class: 'ui-set__hint', text: tr('Os textos das atividades vêm do servidor: seguem NIKO_PIXEL_LANG ou o idioma do sistema onde o Niko-Pixel roda (o inglês, só com NIKO_PIXEL_LANG=en).') }),
     );
 
     this.demoGroup = h(
       'div',
       { class: 'ui-set-group' },
       h('h3', { text: tr('Dados') }),
-      sw('demo', tr('Modo demonstração'), tr('Coloca agentes fictícios no escritório, junto com os reais.'), () => void this.toggleDemo()),
+      sw('demo', tr('Modo demonstração'), tr('Coloca operadores fictícios no quartel-general, junto com os reais.'), () => void this.toggleDemo()),
     );
 
     this.logoutBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Sair'), on: { click: () => void this.logout() } }) as HTMLButtonElement;
@@ -188,7 +180,6 @@ export class SettingsPopover implements UiComponent {
       ),
     );
 
-    this.theme.row.append(world.themeNote);
     this.about = new AboutGroup(ctx);
 
     const close = iconButton(ICONS.close, tr('Fechar configurações'), () => this.hide(), 'ui-icon-btn--sm');
@@ -200,7 +191,7 @@ export class SettingsPopover implements UiComponent {
       h(
         'div',
         { class: 'ui-set-group' },
-        h('h3', { text: tr('Escritório') }),
+        h('h3', { text: tr('Quartel-General') }),
         sw('showNames', tr('Mostrar nomes'), tr('Etiqueta com o nome acima de cada personagem.'), flip('showNames')),
         this.bubbles.row,
         this.liveliness.row,
@@ -210,7 +201,7 @@ export class SettingsPopover implements UiComponent {
         'div',
         { class: 'ui-set-group' },
         h('h3', { text: tr('Avisos') }),
-        sw('browserNotifications', tr('Notificações do navegador'), tr('Avisa quando alguém precisa de você e a aba está em segundo plano.'), () => void this.toggleNotifications()),
+        sw('browserNotifications', tr('Notificações do navegador'), tr('Avisa quando alguém aguarda sua ordem e a aba está em segundo plano.'), () => void this.toggleNotifications()),
       ),
       this.soundGroup.el,
       h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Idioma') }), this.language.row),
@@ -298,7 +289,7 @@ export class SettingsPopover implements UiComponent {
         ? tr('Este navegador não oferece notificações.')
         : state === 'denied'
           ? tr('Bloqueadas pelo navegador: libere nas permissões do site.')
-          : tr('Avisa quando alguém precisa de você e a aba está em segundo plano.');
+          : tr('Avisa quando alguém aguarda sua ordem e a aba está em segundo plano.');
     setText(notif.hint, hint);
     notif.btn.disabled = state === 'unsupported';
   }

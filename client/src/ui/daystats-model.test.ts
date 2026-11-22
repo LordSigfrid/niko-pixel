@@ -62,7 +62,7 @@ describe('formatação', () => {
   });
 
   it('resumo dos status para leitores de tela', () => {
-    expect(statusSummary(ms({ waiting: 12 * MIN, working: 65 * MIN }))).toBe('esperando você 12 min, trabalhando 1 h 5 min');
+    expect(statusSummary(ms({ waiting: 12 * MIN, working: 65 * MIN }))).toBe('aguardando ordem 12 min, em ação 1 h 5 min');
     expect(statusSummary(ms({ idle: MIN }), new Set(['working']))).toBe('sem tempo registrado');
   });
 
@@ -102,7 +102,7 @@ describe('barras empilhadas', () => {
     // A escala é o maior total (b: 4 h): a barra de a ocupa 25%.
     expect(rows[0].segments.reduce((n, s) => n + s.pct, 0)).toBeCloseTo(25);
     expect(rows[1].segments.reduce((n, s) => n + s.pct, 0)).toBeCloseTo(100);
-    expect(rows[0].waiting).toBe('30 min esperando você');
+    expect(rows[0].waiting).toBe('30 min aguardando ordem');
     expect(rows[1].totalText).toBe('4 h no total');
     // Sem o ocioso, a escala passa a ser 2 h.
     const noIdle = roomRows(rooms, new Set(['waiting', 'working', 'shell']));
@@ -136,7 +136,7 @@ describe('por hora', () => {
     ]);
     expect(columns[10]).toMatchObject({ now: false, future: true });
     expect(columns.filter((c) => c.tick).map((c) => c.hour)).toEqual([0, 3, 6, 9, 12, 15, 18, 21]);
-    expect(columns[9].label).toBe('9h–10h: esperando você 10 min, trabalhando 40 min');
+    expect(columns[9].label).toBe('9h–10h: aguardando ordem 10 min, em ação 40 min');
   });
 });
 
@@ -191,10 +191,10 @@ describe('contas, esperas e destaques', () => {
       wall: 'Alguém esperou por você durante 35 min do dia',
       working: '5 h 20 min',
       sessions: '3',
-      subagents: '1 subagente',
+      subagents: '1 reforço',
       tokens: '2,1 M',
       prompts: '12',
-      activity: '300 ferramentas · 1 tarefa concluída',
+      activity: '300 ferramentas · 1 objetivo concluído',
       cost: '—',
       costHint: 'Os transcripts não trouxeram o custo',
     });
@@ -206,7 +206,7 @@ describe('contas, esperas e destaques', () => {
 
   it('tabela equivalente', () => {
     const t = statusTable([{ name: 'loja', ms: ms({ waiting: 5 * MIN, working: H }) }], (r) => r.name, new Set(['waiting', 'working']));
-    expect(t.head).toEqual(['Esperando você', 'Trabalhando', 'Total']);
+    expect(t.head).toEqual(['Aguardando ordem', 'Em ação', 'Total']);
     expect(t.rows).toEqual([['loja', '5 min', '1 h', '1 h 5 min']]);
   });
 });

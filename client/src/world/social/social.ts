@@ -62,7 +62,7 @@ const COIN_COLOR = '#ffd34d';
 const LOSS_COLOR = '#ff8a8a';
 
 const KIND_LIST = Object.keys(KINDS) as GatherKind[];
-const PLACES: Readonly<Record<string, string>> = { [LOUNGE_ID]: tr('Lounge'), [CAFE_ID]: tr('Copa'), [RECEPTION_ID]: tr('Recepção'), [RESTROOM_ID]: tr('Banheiros') };
+const PLACES: Readonly<Record<string, string>> = { [LOUNGE_ID]: tr('Recreação'), [CAFE_ID]: tr('Rancho'), [RECEPTION_ID]: tr('Checkpoint'), [RESTROOM_ID]: tr('Vestiário') };
 /** O que se perde/ganha em cada jogo (texto do extrato: "Perdeu no jokenpô para Rafaela"). */
 const MATCH_WHAT: Partial<Record<GatherKind, string>> = {
   rps: tr('no jokenpô'),
@@ -1231,7 +1231,7 @@ export class Social {
     if (this.events.length >= MAX_EVENTS) this.events.shift();
     const first = g.members.find((m) => m.spot);
     const area = first?.spot ? this.sim.spots.get(first.spot)?.areaId : undefined;
-    const place = (area && (PLACES[area] ?? this.sim.rooms.get(area)?.info.name)) || tr('Escritório');
+    const place = (area && (PLACES[area] ?? this.sim.rooms.get(area)?.info.name)) || tr('Quartel-General');
     this.events.push({ id: `social:${g.id}:${++this.eventSeq}`, at: now, icon, agentId, text, place });
   }
 

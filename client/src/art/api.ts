@@ -274,9 +274,15 @@ export type FloorKind =
   | 'marble' // recepção
   | 'grass' // área externa
   | 'sidewalk' // calçada externa
-  | 'street'; // rua externa (faixas desenhadas pelo render se quiser)
+  | 'street' // rua externa (faixas desenhadas pelo render se quiser)
+  // --- tema tático (Niko-Pixel)
+  | 'sand' // chão de areia batida com pedriscos
+  | 'plate' // chapa de aço xadrez em placas parafusadas
+  | 'bunker'; // concreto escuro gasto, com rachaduras
 
-export type WallPattern = 'plain' | 'stripes' | 'tiles' | 'wood_panel' | 'brick' | 'glass' | 'marble';
+export type WallPattern = 'plain' | 'stripes' | 'tiles' | 'wood_panel' | 'brick' | 'glass' | 'marble'
+  | 'cinder' // (tema tático) blocos de concreto com faixa de alerta no rodapé
+  | 'corrugated'; // (tema tático) chapa ondulada de contêiner
 
 export interface WallStyle {
   /** Cor base da face da parede. */
@@ -318,6 +324,8 @@ export interface RoomTheme {
   accent: string;
   deskVariant: string;
   chairVariant: string;
+  /** (Opcional) Piso das salas de projeto; ausente = 'marble'. */
+  floor?: FloorKind;
 }
 
 /** Ícones pixel art pequenos (~8–12px) para estados acima da cabeça. */

@@ -32,7 +32,6 @@ import { applyPermission } from '../permissions/registry';
 import type { NameStore, StoredCharacter } from './names';
 import { normalizeCwd, roomDisplayNames, SlotAllocator } from './rooms';
 import { tr } from '../../shared/i18n';
-import type { WorldMeta } from '../../shared/world/api';
 
 export const OFFLINE_GRACE_MS = 20_000;
 export const DONE_GRACE_MS = 25_000;
@@ -78,8 +77,6 @@ export interface OfficeDeps {
   updates?: () => UpdateStatus;
   /** Terminais interativos (PtyManager): estado do recurso e os abertos. */
   ptys?: () => { status: PtyStatus; list: PtyInfo[] };
-  /** Habblaud World (WorldService.meta; ver OfficeSnapshot.meta.world). */
-  world?: () => WorldMeta;
   now?: () => number;
 }
 
@@ -94,6 +91,8 @@ export interface TranscriptSummary {
   /** Primeiro evento conhecido (subagentes: o início real, depois de ler o começo do arquivo). */
   firstAt?: number;
   lastAt?: number;
+  /** Papel novo (ex.: o modelo trocou no meio da sessão: "Agente principal (OpenCode · DeepSeek)"); ausente = mantém. */
+  role?: string;
 }
 
 export interface MainInput {
@@ -417,7 +416,7 @@ export class Office {
         this.addActivity(id, act, true);
         rec.synthWait = prevActivity ? { id: act.id, prev: prevActivity } : { id: act.id };
       }
-      this.notice('wait', id, 'alert', tr('✋ {0} precisa de você em {1}: {2}', [info.name, room, reason]), info.roomId);
+      this.notice('wait', id, 'alert', tr('✋ {0} aguarda sua ordem em {1}: {2}', [info.name, room, reason]), info.roomId);
     }
     if (prev === 'waiting' && status !== 'waiting' && rec.synthWait) {
       // Saiu da espera sem nada novo no transcript: volta a mostrar o que estava fazendo.
@@ -633,7 +632,7 @@ export class Office {
     if (opts.notify !== false) {
       const parent = info.parentId ? this.agents.get(info.parentId)?.info : undefined;
       const what = info.title ? `“${info.title}”` : tr('o trabalho');
-      this.notice('deliver', id, 'success', tr('📦 {0} entregou {1} para {2}', [info.name, what, parent?.name ?? tr('o agente principal')]), info.roomId);
+      this.notice('deliver', id, 'success', tr('📦 {0} entregou {1} para {2}', [info.name, what, parent?.name ?? tr('o líder')]), info.roomId);
     }
     this.markDirty();
   }
@@ -674,6 +673,7 @@ export class Office {
     set('model', t.model);
     set('gitBranch', t.gitBranch);
     set('permissionMode', t.permissionMode);
+    if (t.role) set('role', t.role);
     if (info.kind === 'sub' && t.firstAt !== undefined && t.firstAt < info.startedAt) {
       info.startedAt = t.firstAt;
       changed = true;
@@ -892,10 +892,10 @@ export class Office {
     const key = nameKey(name);
     for (const r of this.agents.values()) {
       if (r.info.id === id || (r.removeAt !== undefined && !leaving) || nameKey(r.info.name) !== key) continue;
-      return tr('{0} já está no escritório em {1}', [r.info.name, this.roomName(r.info.roomId)]);
+      return tr('{0} já está no quartel-general em {1}', [r.info.name, this.roomName(r.info.roomId)]);
     }
     for (const a of this.demoSnap?.agents ?? []) {
-      if (nameKey(a.name) === key) return tr('{0} já está no escritório em {1}', [a.name, this.roomName(a.roomId)]);
+      if (nameKey(a.name) === key) return tr('{0} já está no quartel-general em {1}', [a.name, this.roomName(a.roomId)]);
     }
     for (const [n, room] of this.deps.names.reservedNames(roomId)) {
       if (nameKey(n) === key) return tr('{0} já é o personagem de {1}', [n, this.roomName(room)]);
@@ -1003,7 +1003,6 @@ export class Office {
         messages: this.deps.messages !== undefined,
         ...(ptys ? { pty: ptys.status } : {}),
         updates: this.deps.updates?.(),
-        ...(this.deps.world ? { world: this.deps.world() } : {}),
       },
     };
   }
@@ -1042,7 +1041,7 @@ export class Office {
     if (this.rooms.has(roomId)) return;
     this.rooms.set(roomId, { path: roomId, createdAt: now });
     this.recomputeRoomNames();
-    this.notice('room', roomId, 'info', tr('🏗️ Nova sala: {0}', [this.roomName(roomId)]), roomId);
+    this.notice('room', roomId, 'info', tr('🏗️ Nova zona: {0}', [this.roomName(roomId)]), roomId);
   }
 
   private recomputeRoomNames(): void {

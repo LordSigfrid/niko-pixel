@@ -265,7 +265,7 @@ function entriesFor(a: Activity, i: number, ctx: Ctx, out: TerminalEntry[]): voi
       out.push({ kind: 'user', id: `${a.id}:u`, at: a.at, text: detail ?? quoted(a.text) ?? a.text });
       return;
     case 'think': {
-      const text = startsWithText(a.text, tr('Pensando')) ? (seed % 3 === 0 ? undefined : pick(THOUGHTS, seed >>> 3)) : tr('Os subagentes terminaram; vou juntar o que cada um encontrou.');
+      const text = startsWithText(a.text, tr('Pensando')) ? (seed % 3 === 0 ? undefined : pick(THOUGHTS, seed >>> 3)) : tr('Os reforços terminaram; vou juntar o que cada um encontrou.');
       out.push(text ? { kind: 'thinking', id: `${a.id}:k`, at: a.at, text } : { kind: 'thinking', id: `${a.id}:k`, at: a.at });
       return;
     }
@@ -353,14 +353,14 @@ function entriesFor(a: Activity, i: number, ctx: Ctx, out: TerminalEntry[]): voi
       const [done = 0, total = ctx.agent.tasks.length] = (/(\d+)\/(\d+)/.exec(detail ?? '') ?? []).slice(1).map(Number);
       const list = ctx.agent.tasks.slice(0, total || undefined).map((t, k) => `${k < done ? '☒' : k === done ? '◐' : '☐'} ${t.title}`);
       const tool = ctx.codex ? 'update_plan' : 'TodoWrite';
-      call(out, a, tool, total ? tr('{0}({1}/{2} concluídas)', [tool, done, total]) : tool, ctx.codex ? 'Plan updated' : tr('Lista de tarefas atualizada'), list.length ? { input: list.join('\n'), inputKind: 'text' } : undefined);
+      call(out, a, tool, total ? tr('{0}({1}/{2} concluídas)', [tool, done, total]) : tool, ctx.codex ? 'Plan updated' : tr('Lista de objetivos atualizada'), list.length ? { input: list.join('\n'), inputKind: 'text' } : undefined);
       return;
     }
     case 'delegate': {
       const desc = afterColon(a.text);
       const type = ctx.codex ? 'worker' : detail?.split(' — ')[0];
       const tool = ctx.codex ? 'spawn_agent' : 'Agent';
-      call(out, a, tool, `${tool}(${type ? `${type}: ` : ''}${desc})`, tr('Subagentes trabalhando em paralelo; os resultados chegam quando terminarem.'), {
+      call(out, a, tool, `${tool}(${type ? `${type}: ` : ''}${desc})`, tr('Reforços trabalhando em paralelo; os resultados chegam quando terminarem.'), {
         input: tr('{0}. Investigue o código de {1} e devolva um resumo curto com os arquivos envolvidos.', [desc, ctx.project]),
         inputKind: 'text',
       });
@@ -371,7 +371,7 @@ function entriesFor(a: Activity, i: number, ctx: Ctx, out: TerminalEntry[]): voi
         kind: 'system',
         id: `${a.id}:s`,
         at: a.at,
-        text: startsWithText(a.text, tr('Precisa de você'))
+        text: startsWithText(a.text, tr('Aguardando ordem'))
           ? tr('Aguardando você: {0}', [a.text.includes(':') ? afterColon(a.text) : tr('responder no terminal')])
           : startsWithText(a.text, tr('Interrompido por você'))
             ? tr('Interrompido pelo usuário')
@@ -380,7 +380,7 @@ function entriesFor(a: Activity, i: number, ctx: Ctx, out: TerminalEntry[]): voi
       });
       return;
     case 'done': {
-      const text = ctx.agent.kind === 'sub' && ctx.agent.title ? tr('Entrega: {0}. Resumo enviado ao agente principal.', [ctx.agent.title]) : pick(SUMMARIES, seed);
+      const text = ctx.agent.kind === 'sub' && ctx.agent.title ? tr('Entrega: {0}. Resumo enviado ao líder.', [ctx.agent.title]) : pick(SUMMARIES, seed);
       out.push({ kind: 'assistant', id: `${a.id}:a`, at: a.at, text });
       const took = /Concluiu em (.+)$/.exec(a.text)?.[1];
       if (took) out.push({ kind: 'system', id: `${a.id}:s`, at: a.at, text: tr('Turno concluído em {0}', [took]), level: 'info' });

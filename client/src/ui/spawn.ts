@@ -20,7 +20,7 @@ const POLL_MS = 700;
  * 50 s; server/spawn/spawn.ts), para nunca dizer "não confirmou" de algo que ainda vai abrir.
  */
 const WAIT_MS = 90_000;
-const LAST_FOLDER_KEY = 'habblaud.spawn.folder';
+const LAST_FOLDER_KEY = 'niko-pixel.spawn.folder';
 
 interface SpawnInfo {
   id: string;
@@ -85,7 +85,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init });
   } catch {
-    throw new Error(tr('o Habblaud não respondeu'));
+    throw new Error(tr('o Niko-Pixel não respondeu'));
   }
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new Error(body.error ?? tr('erro {0}', [res.status]));
@@ -143,7 +143,7 @@ export class SpawnPanel {
     });
     this.prompt = h('textarea', {
       class: 'ui-rename__input ui-spawn__prompt',
-      attrs: { id: 'ui-spawn-prompt', rows: 5, maxlength: SPAWN_PROMPT_MAX, placeholder: tr('O que o agente deve fazer (opcional)') },
+      attrs: { id: 'ui-spawn-prompt', rows: 5, maxlength: SPAWN_PROMPT_MAX, placeholder: tr('O que o operador deve fazer (opcional)') },
     });
     this.fileInput = h('input', { type: 'file', hidden: true, attrs: { multiple: true, 'aria-hidden': 'true', tabindex: '-1' } });
     this.fileInput.addEventListener('change', () => {
@@ -183,8 +183,8 @@ export class SpawnPanel {
     const close = iconButton(ICONS.close, tr('Fechar'), () => this.hide(), 'ui-icon-btn--sm');
     this.el = h(
       'div',
-      { class: 'ui-popover ui-spawn', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Novo agente'), id: 'ui-spawn', popover: 'auto' } },
-      h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Novo agente') }), close),
+      { class: 'ui-popover ui-spawn', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Mobilizar operador'), id: 'ui-spawn', popover: 'auto' } },
+      h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Mobilizar operador') }), close),
       h(
         'div',
         { class: 'ui-set-group ui-spawn__body' },
@@ -196,7 +196,7 @@ export class SpawnPanel {
         this.prompt,
         h('div', { class: 'ui-spawn__tools' }, this.dictate.el, attachBtn, this.fileInput),
         this.fileList,
-        h('p', { class: 'ui-rename__hint', text: tr('Começa na hora uma sessão do Claude Code em segundo plano no computador, na pasta escolhida; as permissões chegam aqui. Pasta que o Claude Code ainda não conhece abre no app do Claude e espera o Enter lá. Anexos vão para ~/.habblaud/attachments e o pedido leva os caminhos.') }),
+        h('p', { class: 'ui-rename__hint', text: tr('Começa na hora uma sessão do Claude Code em segundo plano no computador, na pasta escolhida; as permissões chegam aqui. Pasta que o Claude Code ainda não conhece abre no app do Claude e espera o Enter lá. Anexos vão para ~/.niko-pixel/attachments e o pedido leva os caminhos.') }),
         this.submitBtn,
         this.status,
       ),
@@ -380,7 +380,7 @@ export class SpawnPanel {
         const running = info.how === 'cli';
         this.say(
           running
-            ? tr('Rodando: a sessão já começou no computador e aparece no escritório em instantes.')
+            ? tr('Rodando: a sessão já começou no computador e aparece no quartel-general em instantes.')
             : info.note
               ? tr('Abri no app do Claude: aperte Enter lá para começar. Não rodou sozinho: {0}.', [info.note])
               : tr('Abri no app do Claude: aperte Enter lá para começar.'),
@@ -389,7 +389,7 @@ export class SpawnPanel {
         this.prompt.value = '';
         this.clearFiles();
         writePref(folder);
-        this.ctx.announce(running ? tr('Agente novo rodando.') : tr('Agente novo aberto no app do Claude.'));
+        this.ctx.announce(running ? tr('Operador mobilizado.') : tr('Operador mobilizado no app do Claude.'));
       } else this.say(info.error ? tr('Não abriu: {0}', [info.error]) : tr('O computador não confirmou a abertura.'), true);
     } catch (err) {
       this.say(tr('Não abriu: {0}', [(err as Error).message]), true);

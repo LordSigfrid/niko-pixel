@@ -701,19 +701,19 @@ export function describeTool(name: string, rawInput: unknown): ActivityDescripti
     case 'TodoWrite': {
       const todos = Array.isArray(input.todos) ? input.todos.filter((t): t is Record<string, unknown> => !!t && typeof t === 'object') : [];
       const done = todos.filter((t) => t.status === 'completed').length;
-      return make('plan', '🗒️', tr('Atualizando a lista de tarefas'), todos.length ? tr('{0}/{1} concluídas', [done, todos.length]) : undefined);
+      return make('plan', '🗒️', tr('Atualizando a lista de objetivos'), todos.length ? tr('{0}/{1} concluídas', [done, todos.length]) : undefined);
     }
     case 'TaskCreate':
-      return make('plan', '🗒️', tr('Nova tarefa: {0}', [str(input.subject) || tr('sem título')]), str(input.description));
+      return make('plan', '🗒️', tr('Novo objetivo: {0}', [str(input.subject) || tr('sem título')]), str(input.description));
     case 'TaskUpdate': {
       const st = str(input.status);
-      if (st === 'completed') return make('plan', '✅', tr('Concluiu a tarefa #{0}', [str(input.taskId)]));
-      if (st === 'in_progress') return make('plan', '🗒️', tr('Começou a tarefa #{0}', [str(input.taskId)]));
-      return make('plan', '🗒️', tr('Atualizando a tarefa #{0}', [str(input.taskId)]));
+      if (st === 'completed') return make('plan', '✅', tr('Cumpriu o objetivo #{0}', [str(input.taskId)]));
+      if (st === 'in_progress') return make('plan', '🗒️', tr('Começou o objetivo #{0}', [str(input.taskId)]));
+      return make('plan', '🗒️', tr('Atualizando o objetivo #{0}', [str(input.taskId)]));
     }
     case 'TaskList':
     case 'TaskGet':
-      return make('plan', '🗒️', tr('Revisando as tarefas'));
+      return make('plan', '🗒️', tr('Revisando os objetivos'));
     case 'EnterPlanMode':
       return make('plan', '🧭', tr('Entrando no modo de planejamento'));
     case 'ExitPlanMode':
@@ -722,7 +722,7 @@ export function describeTool(name: string, rawInput: unknown): ActivityDescripti
     case 'Task': {
       const d = str(input.description);
       const type = str(input.subagent_type);
-      return make('delegate', '👥', d ? tr('Delegando: {0}', [d]) : tr('Chamando um subagente'), [type, str(input.prompt)].filter(Boolean).join(' — '));
+      return make('delegate', '👥', d ? tr('Delegando: {0}', [d]) : tr('Chamando um reforço'), [type, str(input.prompt)].filter(Boolean).join(' — '));
     }
     case 'Workflow':
       return make('delegate', '🕸️', tr('Orquestrando um workflow'));
@@ -731,7 +731,7 @@ export function describeTool(name: string, rawInput: unknown): ActivityDescripti
     case 'ListAgents':
       return make('communicate', '👥', tr('Conferindo a equipe'));
     case 'SendMessage':
-      return make('communicate', '💬', tr('Mensagem para {0}', [str(input.to) || tr('outro agente')]), str(input.message));
+      return make('communicate', '💬', tr('Ordem por rádio para {0}', [str(input.to) || tr('outro operador')]), str(input.message));
     case 'AskUserQuestion': {
       const qs = Array.isArray(input.questions) ? (input.questions as Array<Record<string, unknown>>) : [];
       const questions = askQuestions(qs);
@@ -771,7 +771,7 @@ export function describeTool(name: string, rawInput: unknown): ActivityDescripti
 
 /** Atividade para um prompt do usuário. */
 export function describePrompt(text: string): ActivityDescription {
-  return make('prompt', '📨', tr('Nova tarefa: “{0}”', [truncate(text, 30)]), text);
+  return make('prompt', '📨', tr('Novo objetivo: “{0}”', [truncate(text, 30)]), text);
 }
 
 export function formatDuration(ms: number): string {
@@ -824,16 +824,16 @@ function fitLabel(prefix: string, label: string | undefined, suffix = ''): strin
 export const SPECIAL = {
   think: (): ActivityDescription => make('think', '💭', tr('Pensando…')),
   respond: (text?: string): ActivityDescription => make('respond', '💬', tr('Escrevendo a resposta'), text),
-  turnDone: (ms?: number): ActivityDescription => make('done', '✅', ms ? tr('Concluiu em {0}', [formatDuration(ms)]) : tr('Concluiu')),
+  turnDone: (ms?: number): ActivityDescription => make('done', '✅', ms ? tr('Concluiu em {0}', [formatDuration(ms)]) : tr('Objetivo cumprido')),
   error: (tool?: string, detail?: string): ActivityDescription => make('error', '⚠️', tool ? tr('Erro em {0}', [tool]) : tr('Algo deu errado'), detail),
   interrupted: (): ActivityDescription => make('wait', '✋', tr('Interrompido por você')),
   compact: (): ActivityDescription => make('compact', '🧹', tr('Organizando a memória (compactando)')),
-  waiting: (reason?: string): ActivityDescription => make('wait', '✋', reason ? tr('Precisa de você: {0}', [reason]) : tr('Precisa de você')),
+  waiting: (reason?: string): ActivityDescription => make('wait', '✋', reason ? tr('Aguardando ordem: {0}', [reason]) : tr('Aguardando ordem')),
   backgroundResult: (summary?: string): ActivityDescription => make('other', '📬', tr('Recebeu resultado em segundo plano'), summary),
   apiRetry: (): ActivityDescription => make('wait', '🔁', tr('Instabilidade na API, tentando de novo')),
   rejected: (tool?: string): ActivityDescription => make('wait', '🚫', tool ? tr('Você recusou: {0}', [tool]) : tr('Você recusou a ação')),
   cleared: (): ActivityDescription => make('compact', '🧽', tr('Começou uma conversa nova (/clear)')),
-  supervising: (): ActivityDescription => make('delegate', '👥', tr('Acompanhando os subagentes')),
+  supervising: (): ActivityDescription => make('delegate', '👥', tr('Acompanhando os reforços')),
   answered: (question?: string): ActivityDescription => make('ask', '💬', tr('Recebeu a sua resposta'), question),
   /** Balão do status 'shell': "Esperando o shell: <rótulo>" (ou "Esperando 2 shells: ..."). */
   waitingShell: (label?: string, n = 1, detail?: string): MarkedDescription => ({

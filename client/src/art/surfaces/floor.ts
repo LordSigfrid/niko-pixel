@@ -4,6 +4,7 @@
 import { TILE, type FloorKind } from '../api';
 import { mix, parseColor, ramp, shade, type RGBA } from '../core/color';
 import { PixelBuf } from '../core/pixbuf';
+import { TACTICAL_THEME } from '../theme';
 
 export const CHUNK_TILES = 8;
 export const CHUNK_PX = CHUNK_TILES * TILE;
@@ -49,6 +50,10 @@ export function floorChunk(kind: FloorKind, cx: number, cy: number, o: FloorOpts
   const b = new PixelBuf(CHUNK_PX, CHUNK_PX);
   const x0 = cx * CHUNK_PX;
   const y0 = cy * CHUNK_PX;
+  if (kind === 'street' && TACTICAL_THEME) {
+    paintWarStreet(b, x0, y0, o.seed);
+    return b;
+  }
   switch (kind) {
     case 'wood':
       paintWood(b, x0, y0, o.seed);
@@ -61,6 +66,15 @@ export function floorChunk(kind: FloorKind, cx: number, cy: number, o: FloorOpts
       break;
     case 'sidewalk':
       paintSidewalk(b, x0, y0, o.seed);
+      break;
+    case 'sand':
+      paintSand(b, x0, y0, o.seed);
+      break;
+    case 'plate':
+      paintPlate(b, x0, y0, o.seed);
+      break;
+    case 'bunker':
+      paintBunker(b, x0, y0, o.seed);
       break;
     default:
       for (let ty = 0; ty < CHUNK_TILES; ty++) {
@@ -290,3 +304,220 @@ function paintSidewalk(b: PixelBuf, x0: number, y0: number, seed: number): void 
     }
   }
 }
+
+// ------------------------------------------------------------------ tema tático (Niko-Pixel)
+
+const SAND: readonly RGBA[] = Array.from({ length: LEVELS }, (_, i) => rgba(mix('#c9ad7f', '#dcc496', i / (LEVELS - 1))));
+const SAND_PEBBLE = [rgba('#a98d63'), rgba('#8f7652'), rgba('#e8d6ae')] as const;
+const SAND_TRACK = rgba('#bfa274');
+
+/** Areia batida: ondulação suave contínua, pedriscos e marcas de pisada. */
+function paintSand(b: PixelBuf, x0: number, y0: number, seed: number): void {
+  for (let py = 0; py < CHUNK_PX; py++) {
+    for (let px = 0; px < CHUNK_PX; px++) {
+      const wx = x0 + px;
+      const wy = y0 + py;
+      const sp = h3(wx, wy, 7, seed) % 97;
+      if (sp < 3) {
+        b.put(px, py, SAND_PEBBLE[sp]);
+        continue;
+      }
+      // Ondas de vento: faixas diagonais quebradas pelo ruído.
+      const wave = Math.sin((wx + wy * 0.35) * 0.32 + noise(wx, wy, 18, seed + 2) * 5);
+      if (wave > 0.93 && h3(wx >> 2, wy, 8, seed) % 3 !== 0) {
+        b.put(px, py, SAND_TRACK);
+        continue;
+      }
+      const n = noise(wx, wy, 30, seed) * 0.65 + noise(wx, wy, 6, seed + 4) * 0.35;
+      b.put(px, py, SAND[Math.min(LEVELS - 1, Math.floor(n * LEVELS))]);
+    }
+  }
+}
+
+const PLATE = rgba('#7d848c');
+const PLATE_DK = rgba('#6a7078');
+const PLATE_HI = rgba('#9aa1a9');
+const PLATE_SEAM = rgba('#4f545b');
+const PLATE_BOLT = rgba('#b7bcc2');
+const PLATE_RUST = [rgba('#8a6a4c'), rgba('#7a5a3f')] as const;
+
+/** Chapa de aço xadrez (relevo em losango) em placas de 2x2 tiles com parafusos nos cantos. */
+function paintPlate(b: PixelBuf, x0: number, y0: number, seed: number): void {
+  for (let py = 0; py < CHUNK_PX; py++) {
+    for (let px = 0; px < CHUNK_PX; px++) {
+      const wx = x0 + px;
+      const wy = y0 + py;
+      const sx = wx & 31;
+      const sy = wy & 31;
+      if (sx === 31 || sy === 31) {
+        b.put(px, py, PLATE_SEAM);
+        continue;
+      }
+      if ((sx === 2 || sx === 28) && (sy === 2 || sy === 28)) {
+        b.put(px, py, PLATE_BOLT);
+        continue;
+      }
+      // Relevo: tracinhos alternados (/ e ) numa grade de 4px.
+      const cx = sx & 3;
+      const cy = sy & 3;
+      const alt = ((sx >> 2) + (sy >> 2)) & 1;
+      const ridge = alt ? cx === cy : cx === 3 - cy;
+      const rust = noise(wx, wy, 22, seed + 21);
+      if (rust > 0.8 && h3(wx, wy, 9, seed) % 4 === 0) {
+        b.put(px, py, PLATE_RUST[h3(wx, wy, 10, seed) & 1]);
+        continue;
+      }
+      if (ridge && cx > 0 && cy > 0) b.put(px, py, PLATE_HI);
+      else if (ridge) b.put(px, py, PLATE_DK);
+      else b.put(px, py, sx === 0 || sy === 0 ? PLATE_HI : PLATE);
+    }
+  }
+}
+
+const BUNKER: readonly RGBA[] = Array.from({ length: LEVELS }, (_, i) => rgba(mix('#5f6261', '#737674', i / (LEVELS - 1))));
+const BUNKER_SEAM = rgba('#4b4d4d');
+const BUNKER_CRACK = rgba('#3f4141');
+const BUNKER_SPECK = [rgba('#828582'), rgba('#565958')] as const;
+
+/** Concreto escuro e gasto em placas de 3x3 tiles, com rachaduras finas e manchas. */
+function paintBunker(b: PixelBuf, x0: number, y0: number, seed: number): void {
+  for (let py = 0; py < CHUNK_PX; py++) {
+    for (let px = 0; px < CHUNK_PX; px++) {
+      const wx = x0 + px;
+      const wy = y0 + py;
+      if (wx % 48 === 47 || wy % 48 === 47) {
+        b.put(px, py, BUNKER_SEAM);
+        continue;
+      }
+      const sp = h3(wx, wy, 11, seed) % 53;
+      if (sp < 2) {
+        b.put(px, py, BUNKER_SPECK[sp]);
+        continue;
+      }
+      // Rachaduras: isolinhas finas de um ruído médio, só em algumas placas.
+      const slab = h3(Math.floor(wx / 48), Math.floor(wy / 48), 12, seed);
+      if (slab % 3 === 0) {
+        const c = noise(wx, wy, 11, seed + 31);
+        if (Math.abs(c - 0.5) < 0.012) {
+          b.put(px, py, BUNKER_CRACK);
+          continue;
+        }
+      }
+      const n = noise(wx, wy, 24, seed + 5) * 0.7 + noise(wx, wy, 5, seed + 6) * 0.3;
+      b.put(px, py, BUNKER[Math.min(LEVELS - 1, Math.floor(n * LEVELS))]);
+    }
+  }
+}
+
+// ------------------------------------------------------------------ rua de guerra (tema tático)
+
+const WAR_ASPHALT: readonly RGBA[] = Array.from({ length: LEVELS }, (_, i) => rgba(mix('#3e4147', '#4d5057', i / (LEVELS - 1))));
+const WAR_PATCH: readonly RGBA[] = Array.from({ length: LEVELS }, (_, i) => rgba(mix('#35373c', '#3e4045', i / (LEVELS - 1))));
+const WAR_PATCH_EDGE = rgba('#2f3135');
+const WAR_SPECK = [rgba('#5e6168'), rgba('#373a3f')] as const;
+const WAR_CRACK = rgba('#2d2f34');
+const WAR_SCORCH = [rgba('#36373a'), rgba('#2c2d30')] as const;
+const WAR_HOLE = [rgba('#1c1d20'), rgba('#26272b'), rgba('#34353a')] as const; // sombra, fundo, parede iluminada
+const WAR_RIM = [rgba('#6c6962'), rgba('#57554f')] as const;
+const WAR_CHIP = [rgba('#8c897f'), rgba('#2b2c30')] as const;
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5] as const;
+/** Células (px) onde podem cair crateras, buracos e marcas de queimado. */
+const WAR_CELL = 56;
+
+/**
+ * Asfalto castigado (tema tático): remendos, rachaduras em algumas regiões, buracos, crateras com
+ * borda de entulho e rachaduras radiais, marcas de queimado pontilhadas e lascas soltas. Tudo por
+ * coordenada de mundo + semente (determinístico e contínuo entre blocos).
+ */
+function paintWarStreet(b: PixelBuf, x0: number, y0: number, seed: number): void {
+  for (let py = 0; py < CHUNK_PX; py++) {
+    for (let px = 0; px < CHUNK_PX; px++) {
+      const wx = x0 + px;
+      const wy = y0 + py;
+      const n = noise(wx, wy, 40, seed) * 0.6 + noise(wx, wy, 8, seed + 1) * 0.4;
+      const lv = Math.min(LEVELS - 1, Math.floor(n * LEVELS));
+      let c = WAR_ASPHALT[lv];
+      // remendo de asfalto novo (retângulo escuro com borda)
+      const pcx = Math.floor(wx / 64);
+      const pcy = Math.floor(wy / 64);
+      const ph = h3(pcx, pcy, 11, seed);
+      if (ph % 100 < 20) {
+        const rx = pcx * 64 + 4 + ((ph >>> 8) % 24);
+        const ry = pcy * 64 + 4 + ((ph >>> 13) % 22);
+        const rw = 16 + ((ph >>> 18) % 20);
+        const rh = 10 + ((ph >>> 23) % 12);
+        if (wx >= rx && wx < rx + rw && wy >= ry && wy < ry + rh) {
+          c = wx === rx || wy === ry || wx === rx + rw - 1 || wy === ry + rh - 1 ? WAR_PATCH_EDGE : WAR_PATCH[lv];
+        }
+      }
+      const sp = h3(wx, wy, 5, seed) % 89;
+      if (sp < 2) c = WAR_SPECK[sp];
+      // rede de rachaduras só em algumas regiões
+      const cm = noise(wx, wy, 72, seed + 7);
+      if (cm > 0.6 && Math.abs(noise(wx, wy, 17, seed + 3) - 0.5) < 0.007 + (cm - 0.6) * 0.02) c = WAR_CRACK;
+
+      // crateras, buracos e queimados das células vizinhas
+      let scorch = 0;
+      let hole = -1;
+      let rim = -1;
+      let crack = false;
+      let near = false;
+      const gx = Math.floor(wx / WAR_CELL);
+      const gy = Math.floor(wy / WAR_CELL);
+      for (let cy = gy - 1; cy <= gy + 1; cy++) {
+        for (let cx = gx - 1; cx <= gx + 1; cx++) {
+          const fh = h3(cx, cy, 21, seed);
+          const kind = fh % 100;
+          if (kind >= 50) continue;
+          const crater = kind < 20;
+          const burn = kind >= 42;
+          const fx = cx * WAR_CELL + 10 + ((fh >>> 8) % (WAR_CELL - 20));
+          const fy = cy * WAR_CELL + 10 + ((fh >>> 14) % (WAR_CELL - 20));
+          const r = crater ? 6 + ((fh >>> 20) % 4) : burn ? 0 : 2 + ((fh >>> 20) % 2);
+          const dx = wx + 0.5 - fx;
+          const dy = (wy + 0.5 - fy) * 1.35;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (crater || burn) {
+            const R = crater ? r * 2.6 : 7 + ((fh >>> 20) % 5);
+            if (d < R) scorch = Math.max(scorch, (1 - d / R) * (crater ? 1.1 : 0.8));
+          }
+          if (crater && d < r * 3) near = true;
+          if (r === 0) continue;
+          if (d < r) {
+            const nx = dx / r;
+            const ny = dy / r;
+            const lit = nx + ny;
+            hole = d < r * 0.45 ? 1 : lit > 0.35 ? 2 : lit < -0.15 ? 0 : 1;
+          } else if (d < r + 1.6 && h3(wx, wy, 13, seed) % 3 !== 0) {
+            rim = dx + dy < 0 ? 0 : 1;
+          } else if (crater && d < r * 2.2) {
+            // rachaduras radiais
+            const ang = Math.atan2(dy, dx);
+            for (let i = 0; i < 5; i++) {
+              const th = (((fh >>> (i * 5)) & 31) / 32) * Math.PI * 2;
+              let df = Math.abs(ang - th);
+              if (df > Math.PI) df = Math.PI * 2 - df;
+              const len = r * (1.5 + ((fh >>> (i * 3 + 2)) & 3) * 0.2);
+              if (d < len && df * d < 0.6) crack = true;
+            }
+          }
+        }
+      }
+      if (scorch > 0) {
+        const t = (BAYER4[(wy & 3) * 4 + (wx & 3)] / 16) * 0.5 + (h3(wx, wy, 17, seed) / 4294967296) * 0.5;
+        if (scorch > 0.55 + t * 0.45) c = WAR_SCORCH[1];
+        else if (scorch > t * 0.9 + 0.05) c = WAR_SCORCH[0];
+      }
+      if (crack) c = WAR_CRACK;
+      if (rim >= 0) c = WAR_RIM[rim];
+      if (hole >= 0) c = WAR_HOLE[hole];
+      else {
+        // lascas soltas (pixel claro com sombra embaixo), mais perto das crateras
+        const odds = near ? 23 : 251;
+        if (h3(wx, wy, 9, seed) % odds === 0) c = WAR_CHIP[0];
+        else if (h3(wx, wy - 1, 9, seed) % odds === 0) c = WAR_CHIP[1];
+      }
+      b.put(px, py, c);
+    }
+  }
+}

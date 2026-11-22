@@ -6,6 +6,7 @@ import { luminance, mix, ramp, shade, type Ramp } from '../core/color';
 import { PixelBuf, type Palette } from '../core/pixbuf';
 import type { BufSprite } from '../core/sprite';
 import { HAIR, HEAD_BASE, TEXTURED, type HeadView, type Tpl } from './hair';
+import { bandColor, drawHeadgear, drawVest, hairCutRow, tacticalLook, type TacticalLook } from './tactical';
 
 export const CHAR_W = 24;
 export const CHAR_H = 34;
@@ -565,6 +566,10 @@ function drawCrossedArms(dc: Dc, sleeveCol: Ramp, sleeve: number, fingersUp: boo
     b.set(16, yy + y, sl.base);
     b.set(17, yy + y, yy === 20 ? sl.dd : sl.dk);
   }
+  if (dc.t) {
+    b.set(6, 19 + y, bandColor(dc.t, 0));
+    b.set(16, 19 + y, bandColor(dc.t, 0));
+  }
   // Antebraço de baixo (só a borda inferior aparece) e a mão escondida espiando à direita.
   b.hline(8, 15, 21 + y, fa.dk);
   b.set(16, 21 + y, sk.base);
@@ -592,6 +597,8 @@ interface Dc {
   a: Appearance;
   p: CharPal;
   r: Rig;
+  /** Uniforme tático (tactical.ts); null = roupa original. */
+  t: TacticalLook | null;
 }
 
 function hairPalette(p: CharPal, buzz: boolean): Palette {
@@ -890,6 +897,15 @@ function drawArm(dc: Dc, a: Arm, sleeveCol: Ramp, sleeve: number, dim = 0, backS
     const last = i === pts.length - 1;
     const isSleeve = i < sleeve && !last;
     const c = isSleeve ? sl : sk;
+    if (isSleeve && i === 1 && dc.t) {
+      // Braçadeira da equipe (1 linha; o ponto seguinte do pincel cobre a de baixo).
+      const band = bandColor(dc.t, dim);
+      b.set(x + lean, y + dy, band);
+      b.set(x + 1 + lean, y + dy, shade(band, -0.12));
+      b.set(x + lean, y + 1 + dy, band);
+      b.set(x + 1 + lean, y + 1 + dy, shade(band, -0.12));
+      return;
+    }
     b.set(x + lean, y + dy, c.base);
     b.set(x + 1 + lean, y + dy, c.dk);
     b.set(x + lean, y + 1 + dy, isSleeve && i === sleeve - 1 ? c.dk : c.base);
@@ -1106,6 +1122,7 @@ function drawTorso(dc: Dc): void {
         b.set(9 + lx, y + 2, ac.base);
         break;
     }
+    if (dc.t) drawVest(b, dc.t, 'side', y, lx, !!a.lanyard);
     drawLanyard(dc);
     return;
   }
@@ -1203,6 +1220,7 @@ function drawTorso(dc: Dc): void {
       } else b.rect(9, y, 6, 1, ac.base);
       break;
   }
+  if (dc.t) drawVest(b, dc.t, front ? 'down' : 'up', y, 0, !!a.lanyard);
   drawLanyard(dc);
 }
 
@@ -1517,6 +1535,25 @@ function drawCostume(dc: Dc, costume: CharacterFrameRequest['costume']): void {
   }
 }
 
+/**
+ * Uniforme tático na cabeça: o cabelo acima da linha de corte some (só pixels com as cores do cabelo,
+ * para não apagar mãos/itens), e por cima vem capacete, gorro ou balaclava.
+ */
+function drawTacticalHead(dc: Dc, t: TacticalLook): void {
+  const { b, r, p } = dc;
+  const ox = HX + r.lean;
+  const oy = HY + r.ub + r.hd;
+  const cut = oy + hairCutRow(t);
+  const cols = new Set<number>();
+  for (const c of Object.values(hairPalette(p, dc.a.hairStyle === 'buzz'))) if (c) cols.add(hexKey(c));
+  for (let yy = 0; yy < cut; yy++) {
+    for (let xx = 0; xx < CHAR_W; xx++) {
+      if (b.alpha(xx, yy) > 0 && cols.has(pixelKey(b, xx, yy))) b.clear(xx, yy);
+    }
+  }
+  drawHeadgear(b, t, r.view, ox, oy);
+}
+
 export function renderCharacter(req: CharacterFrameRequest): BufSprite {
   if (req.dir === 'right') {
     const left = renderCharacter({ ...req, dir: 'left' });
@@ -1524,8 +1561,9 @@ export function renderCharacter(req: CharacterFrameRequest): BufSprite {
   }
   const view: HeadView = req.dir === 'up' ? 'up' : req.dir === 'down' ? 'down' : 'side';
   const b = new PixelBuf(CHAR_W, CHAR_H);
-  const a = req.appearance;
-  const dc: Dc = { b, a, p: paletteOf(a), r: makeRig(req, view) };
+  const t = tacticalLook(req.appearance);
+  const a = t ? t.appearance : req.appearance;
+  const dc: Dc = { b, a, p: paletteOf(a), r: makeRig(req, view), t };
   const r = dc.r;
   const sleeve = sleeveLength(a);
   const sr = dc.p.top;
@@ -1543,6 +1581,7 @@ export function renderCharacter(req: CharacterFrameRequest): BufSprite {
     drawHead(dc);
     drawFacialHair(dc);
     drawHair(dc, 'front');
+    if (t) drawTacticalHead(dc, t);
     drawAccessory(dc);
     drawCostume(dc, req.costume);
   };
@@ -1567,11 +1606,7 @@ export function renderCharacter(req: CharacterFrameRequest): BufSprite {
     drawArm(dc, r.armA, sr, sleeve, 0.08);
     drawLegs(dc);
     drawTorso(dc);
-    drawHead(dc);
-    drawFacialHair(dc);
-    drawHair(dc, 'front');
-    drawAccessory(dc);
-    drawCostume(dc, req.costume);
+    headStack();
     if (ip && !r.itemBehind) drawItem(dc, ip[0], ip[1]);
     drawArm(dc, r.armB, sr, sleeve, 0, true);
   } else {
@@ -1587,11 +1622,7 @@ export function renderCharacter(req: CharacterFrameRequest): BufSprite {
       if (!raisedHigh(r.armA)) drawArm(dc, r.armA, sr, sleeve);
       if (!raisedHigh(r.armB) && !(ip && !r.itemBehind && r.twoHands)) drawArm(dc, r.armB, sr, sleeve);
     }
-    drawHead(dc);
-    drawFacialHair(dc);
-    drawHair(dc, 'front');
-    drawAccessory(dc);
-    drawCostume(dc, req.costume);
+    headStack();
     // Braços cruzados por cima do cabelo comprido que cai no peito (a mão que bate fica visível).
     if (r.crossFront !== null) drawCrossedArms(dc, sr, sleeve, r.crossFront === 1);
     if (ip && !r.itemBehind) {

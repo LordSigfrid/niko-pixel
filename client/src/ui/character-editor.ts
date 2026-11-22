@@ -1,5 +1,5 @@
 // Editor do personagem na gaveta do agente: nome, "Sortear" e as peças (pele, cabelo, roupa...) com prévia de corpo
-// inteiro (appearance-fields.ts, o mesmo do personagem do Habblaud World). "Salvar" grava o personagem do projeto (a
+// inteiro (appearance-fields.ts). "Salvar" grava o personagem do projeto (a
 // sala) no servidor; as regras puras (quando aparece, rótulos, o que vai em `parts`) estão em character-model.ts.
 import { NAME_MAX } from '../../../shared/appearance';
 import type { AgentInfo } from '../../../shared/types';
@@ -57,7 +57,7 @@ export class CharacterEditor {
         this.fields.preview,
         h('div', { class: 'ui-char__head' }, h('label', { class: 'ui-char__label' }, h('span', { text: tr('Nome') }), this.nameInput), roll),
       ),
-      h('p', { class: 'ui-muted ui-small', text: tr('Vale para o projeto: a próxima sessão nesta sala chega com este personagem.') }),
+      h('p', { class: 'ui-muted ui-small', text: tr('Vale para o projeto: a próxima sessão nesta zona chega com este personagem.') }),
       this.fields.groups,
       this.error,
       h('div', { class: 'ui-char__actions' }, this.saveBtn, cancel, this.resetBtn),
@@ -83,7 +83,7 @@ export class CharacterEditor {
     setHidden(this.button, !allowed);
     if (this.editing && !allowed) {
       this.close();
-      if (!live || a.status === 'offline') this.ctx.announce(tr('O agente saiu do escritório.'));
+      if (!live || a.status === 'offline') this.ctx.announce(tr('O operador saiu do quartel-general.'));
     }
     if (this.editing && !this.confirmingReset) setHidden(this.resetBtn, !a.custom);
   }

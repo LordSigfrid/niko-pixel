@@ -1,8 +1,45 @@
 // Tapetes decorativos (puros): borda escura, filete claro, franjas nas pontas e padrão no campo.
-import { ramp, shade } from '../core/color';
+import { mix, ramp, shade } from '../core/color';
 import { PixelBuf } from '../core/pixbuf';
+import { TACTICAL_THEME } from '../theme';
+
+/** (Tema tático) Lona/tapete de borracha: sem franjas, ilhoses nos cantos, faixas e marcas de uso. */
+function tacticalMat(w: number, h: number, color: string, seed: number): PixelBuf {
+  const b = new PixelBuf(w, h);
+  const m = ramp(color, 0.05);
+  b.rect(0, 0, w, h, m.dd);
+  b.rect(1, 1, w - 2, h - 2, m.base);
+  // Costura interna tracejada.
+  for (let x = 3; x < w - 3; x += 2) {
+    b.set(x, 2, m.dk);
+    b.set(x, h - 3, m.dk);
+  }
+  for (let y = 3; y < h - 3; y += 2) {
+    b.set(2, y, m.dk);
+    b.set(w - 3, y, m.dk);
+  }
+  // Nervuras (borracha) ou faixas de lona, conforme a semente.
+  const ribbed = Math.abs(seed) % 2 === 0;
+  for (let y = 4; y < h - 4; y++) {
+    for (let x = 4; x < w - 4; x++) {
+      if (ribbed ? y % 3 === 0 : (x + y) % 9 === 0) b.set(x, y, ribbed ? m.dk : m.lt);
+    }
+  }
+  // Marcas de uso (pisadas mais claras).
+  let r = (Math.abs(seed) * 2654435761) >>> 0;
+  for (let i = 0; i < Math.max(3, Math.floor((w * h) / 90)); i++) {
+    r = (Math.imul(r, 1103515245) + 12345) >>> 0;
+    const x = 4 + (r % Math.max(1, w - 8));
+    const y = 4 + ((r >>> 12) % Math.max(1, h - 8));
+    b.set(x, y, shade(m.base, 0.06));
+  }
+  // Ilhoses metálicos nos cantos.
+  for (const [cx, cy] of [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]] as const) b.set(cx, cy, '#c9ccd0');
+  return b;
+}
 
 export function renderRug(w: number, h: number, color: string, seed: number): PixelBuf {
+  if (TACTICAL_THEME) return tacticalMat(w, h, mix(color, "#5a5f4a", 0.55), seed);
   const b = new PixelBuf(w, h);
   const m = ramp(color, 0.06);
   const fringe = '#efe6d2';

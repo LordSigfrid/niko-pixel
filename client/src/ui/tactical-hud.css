@@ -1,0 +1,171 @@
+/* HUD tático do Niko-Pixel: carregado DEPOIS de styles.css e só sobrescreve. Lembra um HUD de shooter de rodadas:
+   preto-oliva translúcido, filetes âmbar, cantos chanfrados, rótulos em caixa-alta condensada e números monoespaçados.
+   Para voltar ao visual clássico, tire o import em ui/index.ts. */
+
+.ui-root {
+  --ui-bg: rgba(14, 16, 12, 0.88);
+  --ui-bg-solid: rgba(16, 18, 14, 0.97);
+  --ui-bg-soft: rgba(232, 180, 74, 0.04);
+  --ui-bg-hover: rgba(232, 180, 74, 0.09);
+  --ui-line: rgba(232, 180, 74, 0.16);
+  --ui-line-strong: rgba(232, 180, 74, 0.38);
+  --ui-text: #ece6d3;
+  --ui-muted: #aaa48f;
+  --ui-faint: #948e79;
+  --ui-accent: #f0bd4f;
+  --ui-accent-soft: rgba(240, 189, 79, 0.14);
+
+  --st-working: #8fd14f;
+  --st-waiting: #ff9f2e;
+  --st-shell: #4fd1c5;
+  --st-idle: #8f9a80;
+  --st-done: #6fb7ff;
+
+  --lv-ok: #8fd14f;
+  --lv-warn: #ffb02e;
+  --lv-crit: #ff5a4a;
+
+  /* Condensada de painel militar: Bahnschrift (Windows), DIN (macOS), Roboto Condensed / Arial Narrow. */
+  --font-hud: 'Bahnschrift', 'DIN Alternate', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-px: var(--font-hud);
+  --font-ui: var(--font-hud);
+
+  --radius: 2px;
+  --radius-sm: 2px;
+  --cut: 8px;
+}
+
+/* Cantos chanfrados (canto superior esquerdo e inferior direito), a assinatura do HUD. */
+.ui-root .ui-panel,
+.ui-root .ui-usage-card,
+.ui-root .ui-btn-group,
+.ui-root .ui-btn--primary {
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+
+.ui-root .ui-panel {
+  border-color: var(--ui-line);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    var(--ui-bg);
+}
+
+/* Barra do topo: faixa preta com filete âmbar e linhas de varredura discretas. */
+.ui-root .ui-topbar {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(10, 11, 8, 0.96), rgba(16, 18, 13, 0.9));
+  border-bottom: 1px solid rgba(240, 189, 79, 0.45);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.ui-root .ui-wordmark {
+  width: 123px;
+}
+
+/* Títulos de painel: caixa-alta, espaçada, com marcador âmbar à esquerda. */
+.ui-root .ui-side__title h2,
+.ui-root .ui-feed__title h2,
+.ui-root .ui-sec__title {
+  font-family: var(--font-hud);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ui-accent);
+}
+
+.ui-root .ui-side__title h2::before,
+.ui-root .ui-feed__title h2::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 0.9em;
+  margin-right: 7px;
+  vertical-align: -0.08em;
+  background: var(--ui-accent);
+  box-shadow: 0 0 6px rgba(240, 189, 79, 0.6);
+}
+
+/* Botões de ícone: quadrados, com moldura fina ao passar o mouse. */
+.ui-root .ui-icon-btn {
+  border-radius: 2px;
+  color: var(--ui-muted);
+}
+
+.ui-root .ui-icon-btn:hover {
+  color: var(--ui-accent);
+  box-shadow: inset 0 0 0 1px var(--ui-line-strong);
+}
+
+.ui-root .ui-btn-group {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.ui-root .ui-btn.is-on .ui-px-icon {
+  color: var(--ui-accent);
+}
+
+.ui-root .ui-btn--primary {
+  font-family: var(--font-hud);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: #b5832a;
+  border-color: #f0bd4f;
+  color: #120f08;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+    0 6px 18px rgba(240, 189, 79, 0.22);
+}
+
+/* Cartões de esquadrão (contas): placa de HUD com faixa da cor do time e números monoespaçados. */
+.ui-root .ui-usage-card {
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--acc) 22%, transparent), transparent 38%),
+    rgba(0, 0, 0, 0.45);
+  border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+  border-left: 3px solid var(--acc);
+}
+
+.ui-root .ui-usage-card:hover,
+.ui-root .ui-usage-card:focus-within {
+  border-color: color-mix(in srgb, var(--acc) 70%, transparent);
+  border-left-color: var(--acc);
+}
+
+.ui-root .ui-usage-card__name {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.ui-root .ui-usage-card__body {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Letra do esquadrão: insígnia quadrada, recortada, estilo estêncil. */
+.ui-root .ui-acc-chip {
+  border-radius: 0;
+  font-family: var(--font-hud);
+  font-weight: 800;
+  clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+/* Campos de texto: fundo preto, cursor âmbar. */
+.ui-root input,
+.ui-root textarea {
+  caret-color: var(--ui-accent);
+}
+
+.ui-root input:focus-visible,
+.ui-root textarea:focus-visible {
+  outline-color: var(--ui-accent);
+}

@@ -12,7 +12,7 @@ export type TerminalFilter = 'all' | 'prompts' | 'noTools';
 
 export const TERMINAL_FILTERS: readonly [TerminalFilter, string, string][] = [
   ['all', tr('Tudo'), tr('Toda a conversa')],
-  ['prompts', tr('Só prompts'), tr('Só os seus prompts e as respostas finais do agente')],
+  ['prompts', tr('Só prompts'), tr('Só os seus prompts e as respostas finais do operador')],
   ['noTools', tr('Sem ferramentas'), tr('Esconde as ferramentas e os resultados')],
 ];
 

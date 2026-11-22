@@ -39,7 +39,7 @@ export class FeedPanel implements UiComponent {
       create: (f) => this.createRow(f),
       update: (li, f) => this.updateRow(li, f),
     });
-    this.empty = h('p', { class: 'ui-feed__empty', text: tr('Os eventos dos agentes aparecem aqui assim que acontecem.') });
+    this.empty = h('p', { class: 'ui-feed__empty', text: tr('Os eventos dos operadores aparecem aqui assim que acontecem.') });
     this.newPill = h('button', { class: 'ui-feed__new', type: 'button', hidden: true, on: { click: () => this.resume() } });
     this.ticker = h('span', { class: 'ui-feed__ticker', attrs: { 'aria-hidden': 'true' } });
     this.filterNote = h('span', { class: 'ui-feed__filter', hidden: true });
@@ -51,11 +51,11 @@ export class FeedPanel implements UiComponent {
     });
     this.el = h(
       'section',
-      { class: 'ui-panel ui-feed', attrs: { 'aria-label': tr('Feed de atividade'), id: 'ui-feed' } },
+      { class: 'ui-panel ui-feed', attrs: { 'aria-label': tr('Rádio: registro de combate'), id: 'ui-feed' } },
       h(
         'div',
         { class: 'ui-feed__head' },
-        h('button', { class: 'ui-feed__title', type: 'button', on: { click: () => ctx.togglePanel('feed') } }, h('h2', { text: tr('Atividade') }), this.filterNote, this.ticker),
+        h('button', { class: 'ui-feed__title', type: 'button', on: { click: () => ctx.togglePanel('feed') } }, h('h2', { text: tr('Rádio') }), this.filterNote, this.ticker),
         this.newPill,
         this.toggleBtn,
       ),
@@ -115,7 +115,7 @@ export class FeedPanel implements UiComponent {
     setHidden(this.empty, visible.length > 0 || officeIsEmpty(this.ctx));
     setText(
       this.empty,
-      filtering && this.items.length > 0 ? tr('Nenhum evento das contas selecionadas.') : tr('Os eventos dos agentes aparecem aqui assim que acontecem.'),
+      filtering && this.items.length > 0 ? tr('Nenhum evento das equipes selecionadas.') : tr('Os eventos dos operadores aparecem aqui assim que acontecem.'),
     );
     setHidden(this.filterNote, !filtering);
     if (filtering) {
@@ -127,7 +127,7 @@ export class FeedPanel implements UiComponent {
     const latest = pending[pending.length - 1] ?? visible[visible.length - 1];
     setText(this.ticker, latest ? `${latest.agentName}: ${latest.activity.icon} ${latest.activity.text}` : '');
     this.toggleBtn.innerHTML = open ? ICONS.chevronDown : ICONS.chevronUp;
-    const label = open ? tr('Recolher feed ( ] )') : tr('Abrir feed ( ] )');
+    const label = open ? tr('Recolher rádio ( ] )') : tr('Abrir rádio ( ] )');
     setAttr(this.toggleBtn, 'aria-label', label);
     setTitle(this.toggleBtn, label);
     setAttr(this.toggleBtn, 'aria-expanded', String(open));

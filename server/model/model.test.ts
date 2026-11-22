@@ -44,10 +44,10 @@ describe('salas', () => {
       new Map([
         ['1', '/p/empresa/applications/app'],
         ['2', '/p/outro/app'],
-        ['3', '/p/habblaud'],
+        ['3', '/p/niko-pixel'],
       ]),
     );
-    expect([...names.values()]).toEqual(['applications/app', 'outro/app', 'habblaud']);
+    expect([...names.values()]).toEqual(['applications/app', 'outro/app', 'niko-pixel']);
   });
 });
 
@@ -224,7 +224,7 @@ describe('Office', () => {
     office.addActivity('acc:1', act('a1', now()), true);
     let r = office.commit();
     expect(r.changed).toBe(true);
-    expect(r.notices.map((n) => n.text)).toEqual(['🏗️ Nova sala: loja', `👋 ${name} chegou em loja (Conta C)`]);
+    expect(r.notices.map((n) => n.text)).toEqual(['🏗️ Nova zona: loja', `👋 ${name} chegou em loja (Conta C)`]);
     expect(r.feed.map((f) => f.id)).toEqual(['a1']);
     expect(r.snapshot.accounts[0].sessions).toBe(1);
     office.setStatus('acc:1', 'waiting', 'aprovar uma permissão');
@@ -266,7 +266,7 @@ describe('Office', () => {
     office.addActivity('acc:1', { ...act('w1', now()), kind: 'delegate', text: 'Orquestrando um workflow' }, true);
     office.endBoot();
     const r = office.commit();
-    expect(r.snapshot.agents[0].activity).toMatchObject({ kind: 'wait', text: 'Precisa de você: responder uma pergunta' });
+    expect(r.snapshot.agents[0].activity).toMatchObject({ kind: 'wait', text: 'Aguardando ordem: responder uma pergunta' });
     expect(r.notices).toEqual([]);
     // O feed do boot vai para quem conectar (recentFeed), sem a espera sintetizada.
     expect(office.recentFeed(10).map((f) => f.id)).toEqual(['w1']);
@@ -354,7 +354,7 @@ describe('Office', () => {
     advance(20_000);
     office.addSub({ id: 's1:x', parentId: 'acc:1', sessionId: 's1', role: 'Workflow', background: false, startedAt: now() });
     office.fillWorkingActivity('acc:1');
-    expect(office.get('acc:1')!.activity).toMatchObject({ kind: 'delegate', text: 'Acompanhando os subagentes' });
+    expect(office.get('acc:1')!.activity).toMatchObject({ kind: 'delegate', text: 'Acompanhando os reforços' });
     expect(office.commit().feed).toEqual([]);
   });
 
@@ -558,7 +558,7 @@ describe('Office: personagem do projeto', () => {
     const other = office.get('acc:2')!.name;
     expect(office.setCharacter('acc:1', { name: other.toUpperCase(), seed: 1, parts: {} })).toEqual({
       result: 'conflict',
-      message: `${other} já está no escritório em web`,
+      message: `${other} já está no quartel-general em web`,
     });
     expect(office.setCharacter('acc:2', { name: 'Zé', seed: 1, parts: {} })).toEqual({ result: 'ok' });
     office.closeMain('acc:2');
@@ -620,7 +620,7 @@ describe('Office: personagem do projeto', () => {
     expect(names.get('s2')).toBeUndefined();
   });
 
-  describe('reinício do Habblaud (names.json em arquivo)', () => {
+  describe('reinício do Niko-Pixel (names.json em arquivo)', () => {
     /** Grava o names.json e sobe um NameStore e um Office novos lendo o mesmo arquivo. */
     const restart = (before: NameStore, file: string) => {
       before.flush();
