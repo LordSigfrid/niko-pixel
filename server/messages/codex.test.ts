@@ -69,7 +69,7 @@ describe('codex queue (binário falso)', () => {
     const before = fakeCodexCalls(log).length;
     expect(await run(job({ text: 'a\u0000b' }))).toEqual({ ok: false, error: 'a mensagem tem caracteres que não dá para mandar ao Codex' });
     expect(await run(job({ thread: 'nome-da-sessao' }))).toEqual({ ok: false, error: 'id de thread do Codex inválido' });
-    expect(await run(job({ codexHome: 'relativo' }))).toEqual({ ok: false, error: 'pasta da conta do Codex inválida' });
+    expect(await run(job({ codexHome: 'relativo' }))).toEqual({ ok: false, error: 'pasta da equipe do Codex inválida' });
     expect(fakeCodexCalls(log)).toHaveLength(before);
     expect(await createCodexQueueRunner(join(tmp.dir, 'nao-existe'))(job())).toEqual({ ok: false, error: expect.stringMatching(/^não consegui rodar o Codex/) });
     expect(firstLine('\n  \nError: x\nmais')).toBe('Error: x');
