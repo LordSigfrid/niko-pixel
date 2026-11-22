@@ -1,6 +1,8 @@
 {
   "name": "niko-pixel",
-  "owner": { "name": "Márcio Junior", "url": "https://github.com/marmottajr" },
+  "owner": {
+    "name": "LordSigfrid"
+  },
   "description": "Plugins do Niko-Pixel, o escritório virtual em pixel art das suas sessões do Claude Code.",
   "version": "1.0.3",
   "plugins": [

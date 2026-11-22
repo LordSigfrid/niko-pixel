@@ -4,8 +4,7 @@
   "version": "1.0.3",
   "description": "Leva para a sessão do Claude Code as mensagens que você digita no Niko-Pixel (painel do agente ou terminal), como se você as tivesse digitado no terminal.",
   "author": {
-    "name": "Márcio Junior",
-    "url": "https://github.com/marmottajr"
+    "name": "LordSigfrid"
   },
   "license": "MIT",
   "keywords": [

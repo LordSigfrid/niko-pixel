@@ -1145,6 +1145,8 @@ después de una actualización, Niko-Pixel puede dejar de funcionar, total o par
 [MIT](LICENSE). Las imágenes en `client/public/assets` (logotipo, ilustraciones, cuadros y pósters) se generaron con
 IA para este proyecto y se convirtieron en pixel art con los scripts de `scripts/assets/`.
 
+Niko-Pixel se basa en [Habblaud](https://github.com/marmottajr/habblaud), de Márcio Junior, también bajo la licencia MIT.
+
 ## Vida social
 
 Cuando dos o más agentes no tienen nada que hacer (ociosos, o esperando un shell desde hace más de 40 segundos),

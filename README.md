@@ -1100,6 +1100,8 @@ after an update, Niko-Pixel may stop working, fully or partially, until it's adj
 [MIT](LICENSE). The images in `client/public/assets` (logo, illustrations, pictures and posters) were generated with
 AI for this project and converted into pixel art by the scripts in `scripts/assets/`.
 
+Niko-Pixel is based on [Habblaud](https://github.com/marmottajr/habblaud) by Márcio Junior, also under the MIT license.
+
 ## Social life
 
 When two or more agents have nothing to do — idle, or waiting on a shell for more than 40 seconds — they stop
