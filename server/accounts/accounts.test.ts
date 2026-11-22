@@ -299,3 +299,22 @@ describe('uso (5h e semanal)', () => {
     }
   });
 });
+
+describe('conta única', () => {
+  it('uma conta só, sem atalho nem nome, aparece como "Claude" (C); com duas, Equipe A e B', async () => {
+    const { mkdtempSync, mkdirSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const home = mkdtempSync(join(tmpdir(), 'niko-solo-'));
+    try {
+      const a = join(home, '.claude');
+      const b = join(home, '.claude-trabalho');
+      mkdirSync(a);
+      mkdirSync(b);
+      expect(detectAccounts([a], { home, env: {} }).map((x) => [x.short, x.name])).toEqual([['C', 'Claude']]);
+      expect(detectAccounts([a, b], { home, env: {} }).map((x) => [x.short, x.name])).toEqual([['A', 'Equipe A'], ['B', 'Equipe B']]);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});

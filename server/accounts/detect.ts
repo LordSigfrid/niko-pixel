@@ -374,13 +374,15 @@ export function detectAccounts(dirs: string[], opts: { home?: string; env?: Node
     return '?';
   };
 
+  // Uma conta só, sem atalho nem nome definido: é "o Claude" (letra C). Com várias, Equipe A, B... para diferenciar.
+  const solo = partial.length === 1 && !partial[0].short && !str(partial[0].ov?.name);
   return partial.map((p, i) => {
-    const short = p.short ?? fallbackShort();
+    const short = solo ? 'C' : (p.short ?? fallbackShort());
     const acc: DetectedAccount = {
       id: p.id,
       configDir: str(p.ov?.configDir) ?? p.dir,
       short,
-      name: str(p.ov?.name) ?? tr('Equipe {0}', [short]),
+      name: str(p.ov?.name) ?? (solo ? 'Claude' : tr('Equipe {0}', [short])),
       color: str(p.ov?.color) ?? ACCOUNT_COLORS[i % ACCOUNT_COLORS.length],
     };
     const email = str(p.ov?.email) ?? p.cfg.email;
