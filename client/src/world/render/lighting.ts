@@ -9,7 +9,7 @@ import { TILE, type ArtModule, type ScreenMode } from '../../art/api';
 import { mulberry32 } from '../../../../shared/hash';
 import { BUILDING_H, COL_W, CORRIDOR_H, CORRIDOR_Y } from '../constants';
 import { lampFlicker, type ExteriorLayout, type SlotShell } from '../layout/exterior';
-import { HELI } from './war-art';
+import { HELI, PLANE } from './war-art';
 import type { RoomState } from '../sim/room-state';
 import type { Sim } from '../sim/sim';
 import { buildAnim } from './anim';
@@ -42,6 +42,8 @@ export interface LightScene {
   /** Helicópteros (tema tático): chão sob ele em `y`, desenhado em heliTop(). */
   readonly helis?: readonly { x: number; y: number; alt: number; dir: 1 | -1; phase: number }[];
   heliTop?(h: { y: number; alt: number; phase: number }, now: number): number;
+  /** Aviões de alta altitude (tema tático): chão sob ele em `y`, desenhado `alt` px acima. */
+  readonly planes?: readonly { x: number; y: number; alt: number; dir: 1 | -1; phase: number }[];
   roomInSlot(slot: number): RoomState | undefined;
   deskScreen(f: FurnVis, area: AreaVis): ScreenMode;
 }
@@ -518,6 +520,7 @@ export class Lighting {
       if (n > 0.6 && !this.reduced) this.drawFireflies(ctx, scene, view, now, (n - 0.6) / 0.4);
     }
     this.drawHeliLights(ctx, scene, view, now, n);
+    this.drawPlaneLights(ctx, scene, view, now, n);
     ctx.restore();
   }
 
@@ -644,6 +647,43 @@ export class Lighting {
         ctx.fill();
         ctx.globalAlpha = 0.6 * a;
         ctx.drawImage(white, Math.round(gx - 24), Math.round(gy - 10), 48, 20);
+      }
+    }
+  }
+
+  /**
+   * Luzes do avião: vermelha/verde nas pontas das asas (fixas), estrobo branco duplo na cauda e
+   * farol vermelho no ventre. Fracas de dia, fortes à noite; com movimento reduzido nada pisca.
+   */
+  private drawPlaneLights(ctx: CanvasRenderingContext2D, scene: LightScene, view: View, now: number, n: number): void {
+    const planes = scene.planes;
+    if (!planes?.length) return;
+    const red = glowSprite('#ff3a2e', 16);
+    const green = glowSprite('#46ff7a', 12);
+    const white = glowSprite('#ffffff', 24);
+    const strength = 0.3 + 0.7 * n;
+    for (const p of planes) {
+      if (p.x < view.x0 - 120 || p.x > view.x1 + 120 || p.y - p.alt < view.y0 - 60 || p.y - p.alt > view.y1 + 40) continue;
+      const top = p.y - p.alt;
+      const at = (pt: readonly [number, number]) => [Math.round(p.x + p.dir * pt[0]), Math.round(top + pt[1])] as const;
+      const [fx, fy] = at(PLANE.navFar);
+      const [nx, ny] = at(PLANE.navNear);
+      // a asa "de trás" é a esquerda indo para a direita: vermelha à esquerda, verde à direita
+      const [lx, ly, rx, ry] = p.dir > 0 ? [fx, fy, nx, ny] : [nx, ny, fx, fy];
+      ctx.globalAlpha = 0.85 * strength;
+      ctx.drawImage(red, lx - 8, ly - 8);
+      ctx.drawImage(green, rx - 6, ry - 6);
+      const t = ((now + p.phase) % 1200) / 1200;
+      const flash = this.reduced ? 0.45 : t < 0.05 || (t > 0.12 && t < 0.17) ? 1 : 0;
+      if (flash > 0) {
+        const [sx, sy] = at(PLANE.strobe);
+        ctx.globalAlpha = flash * strength;
+        ctx.drawImage(white, sx - 12, sy - 12);
+      }
+      if (this.reduced || (now + p.phase) % 1600 < 700) {
+        const [bx, by] = at(PLANE.beacon);
+        ctx.globalAlpha = 0.7 * strength;
+        ctx.drawImage(red, bx - 8, by - 8);
       }
     }
   }

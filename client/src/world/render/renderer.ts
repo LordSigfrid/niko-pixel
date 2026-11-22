@@ -16,15 +16,18 @@ import { cobwebScale, hourglassIcon, HOURGLASS_FLIP_MS, STORM_LIFT } from '../si
 import type { Sim } from '../sim/sim';
 import { buildAnim, furnitureScale, NO_ANIM, sweepDelay, type BuildAnim } from './anim';
 import { daylightModeOf, parseHourParam } from './daylight';
-import { RoomFxRenderer } from './github-fx';
+import { reducedMotion, RoomFxRenderer } from './github-fx';
 import { Lighting } from './lighting';
 import { Particles } from './particles';
 import { TACTICAL_THEME } from '../../art/theme';
 import { h3 } from '../../art/surfaces/floor';
-import { carSprite, heliShadowSprite, heliSprite, propSprite, shadowSprite, vehicleSprite } from './props';
-import { CAMO_COUNT, HELI, pickVehicle, VEHICLE_FRAMES, VEHICLE_SPECS, type VehicleKind } from './war-art';
+import { carSprite, heliShadowSprite, heliSprite, planeShadowSprite, planeSprite, propSprite, shadowSprite, vehicleSprite } from './props';
+import { CAMO_COUNT, HELI, pickVehicle, PLANE, VEHICLE_FRAMES, VEHICLE_SPECS, type VehicleKind } from './war-art';
+import { canSpawn, spawnSpeed, spriteExtent, stepTraffic } from './traffic';
 import { countBadge, fallbackIcon } from './shell-sprites';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalCostume, seasonalFurniture } from './seasonal';
+import { drawAreaDamage, drawBrokenGlass, drawSmoke, drawWallDamage } from './destruction-art';
+import { hash32 } from '../../../../shared/hash';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
 
 const enum K {
@@ -47,7 +50,12 @@ interface Car {
   x: number;
   y: number;
   dir: 1 | -1;
+  /** Velocidade de cruzeiro e atual (px/s); a atual cai quando alcança o da frente (traffic.ts). */
   speed: number;
+  v: number;
+  /** Extensão real do sprite à frente/atrás da âncora (espaçamento na faixa). */
+  ahead: number;
+  behind: number;
   variant: number;
   /** 'car' = carrinho do visual clássico; os demais são os veículos do tema tático. */
   kind: VehicleKind | 'car';
@@ -62,6 +70,17 @@ interface Car {
 
 /** Helicóptero atravessando o mapa (tema tático). `y` = chão sob ele; desenhado `alt` px acima. */
 interface Heli {
+  x: number;
+  y: number;
+  alt: number;
+  dir: 1 | -1;
+  speed: number;
+  variant: number;
+  phase: number;
+}
+
+/** Avião de alta altitude (tema tático): `y` = chão sob ele (sombra); desenhado `alt` px acima. */
+interface Plane {
   x: number;
   y: number;
   alt: number;
@@ -116,6 +135,8 @@ export class Renderer {
   private nextCarAt = 0;
   helis: Heli[] = [];
   private nextHeliAt = -1;
+  planes: Plane[] = [];
+  private nextPlaneAt = -1;
   private ents: Ent[] = [];
   private pool: Ent[] = [];
   private date = new Date();
@@ -140,7 +161,10 @@ export class Renderer {
   night = 0;
   private clearColor = '#7fae62';
   private grass: CanvasPattern | null = null;
-  private theme: SeasonalTheme = 'none';
+  /** Tema de cada área (id da área -> tema): o prédio todo igual ou, no automático tático, por zona. */
+  private themeOf: (areaId: string) => SeasonalTheme = () => 'none';
+  /** Alguma área com tema neste frame (evita varrer as áreas à toa). */
+  private anyTheme = false;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -161,11 +185,12 @@ export class Renderer {
   // =================================================================== sincronização com a simulação
 
   /** Mantém caches e visuais coerentes com o prédio atual. */
-  sync(theme: SeasonalTheme = 'none'): void {
+  sync(theme: SeasonalTheme | ((areaId: string) => SeasonalTheme) = 'none'): void {
     const sim = this.sim;
-    const themeChanged = theme !== this.theme;
-    this.theme = theme;
-    const assetsChanged = this.builtAssetsVersion !== this.assetsVersion || themeChanged;
+    const themeOf = typeof theme === 'function' ? theme : () => theme;
+    this.themeOf = themeOf;
+    const assetsChanged = this.builtAssetsVersion !== this.assetsVersion;
+    let any = false;
     if (this.baseCols !== sim.building.cols || assetsChanged) this.buildBase();
     if (this.layoutVersion !== sim.layoutVersion || assetsChanged) {
       this.layoutVersion = sim.layoutVersion;
@@ -173,7 +198,7 @@ export class Renderer {
       for (const a of [...sim.building.core, sim.building.corridor]) {
         want.add(a.id);
         const cur = this.areas.get(a.id);
-        if (!cur || cur.layout !== a || assetsChanged) this.areas.set(a.id, buildAreaVis(this.art, a, undefined, this.assets, theme));
+        if (!cur || cur.layout !== a || assetsChanged) this.areas.set(a.id, buildAreaVis(this.art, a, undefined, this.assets, themeOf(a.id)));
       }
       for (const room of sim.rooms.values()) {
         if (!room.present) continue;
@@ -189,10 +214,17 @@ export class Renderer {
       this.occupiedSlots.add(room.slot);
       const cur = this.areas.get(room.id);
       if (!cur || cur.layout !== room.layout || cur.version !== room.version || assetsChanged) {
-        this.areas.set(room.id, buildAreaVis(this.art, room.layout, room, this.assets, theme));
+        this.areas.set(room.id, buildAreaVis(this.art, room.layout, room, this.assets, themeOf(room.id)));
       } else cur.room = room;
     }
     for (const [id, vis] of this.areas) if (vis.room && !vis.room.present) this.areas.delete(id);
+    // tema trocou numa área (escolha nova ou zona do automático): refaz só os caches dela
+    for (const [id, vis] of this.areas) {
+      const want = themeOf(id);
+      if (want !== 'none') any = true;
+      if (vis.theme !== want) this.areas.set(id, buildAreaVis(this.art, vis.layout, vis.room, this.assets, want));
+    }
+    this.anyTheme = any;
     this.builtAssetsVersion = this.assetsVersion;
   }
 
@@ -409,11 +441,21 @@ export class Renderer {
       const anim = vis.room ? buildAnim(vis.room.phase, vis.room.progress(now)) : NO_ANIM;
       this.drawFloor(vis, anim);
     }
+    const still = reducedMotion();
+    const fxT = still ? 0 : now;
+    // Destruição: rachaduras, entulho e queimados no piso (antes das paredes e dos móveis)
+    if (this.anyTheme) {
+      for (const vis of this.areas.values()) {
+        if (vis.theme !== 'destruction' || (vis.room && vis.room.phase !== 'ready')) continue;
+        if (!visible(vis.px.x, vis.px.y, vis.px.w, vis.px.h)) continue;
+        this.safe(() => drawAreaDamage(ctx, vis.px, hash32(vis.id), fxT, vis.room ? 1 : 0.6));
+      }
+    }
     for (const vis of this.areas.values()) {
       const p = vis.px;
       if (!visible(p.x, p.y - WALL_MARGIN, p.w, p.h + WALL_MARGIN)) continue;
       const anim = vis.room ? buildAnim(vis.room.phase, vis.room.progress(now)) : NO_ANIM;
-      this.drawWalls(vis, anim, now, hour);
+      this.drawWalls(vis, anim, now, hour, fxT);
     }
     const view = { x0: vx0, y0: vy0, x1: vx1, y1: vy1 };
     // alarme de CI: tom vermelho no piso (por baixo dos móveis e personagens)
@@ -522,19 +564,36 @@ export class Renderer {
     this.particles.update(dt);
     this.particles.draw(ctx, vx0, vy0, vx1, vy1, now);
     this.drawHelis(now, visible);
+    this.drawPlanes(now, visible);
 
     // ---- luz: noite, salas apagadas, brilhos
     this.night = this.lighting.night;
     this.drawLighting(now, vx0, vy0, vx1, vy1);
-    if (this.theme !== 'none') {
+    if (this.anyTheme) {
       for (const vis of this.areas.values()) {
         if (vis.room && vis.room.phase !== 'ready') continue;
         if (!visible(vis.px.x, vis.px.y, vis.px.w, vis.px.h)) continue;
-        drawSeasonalLights(ctx, this.theme, vis.layout, vis.room ? vis.room.light(now) : 1);
+        if (vis.theme === 'none' || vis.theme === 'destruction') continue;
+        drawSeasonalLights(ctx, vis.theme, vis.layout, vis.room ? vis.room.light(now) : 1, now, this.night, still);
       }
     }
     // giroflex e balão "!" do alarme de CI (brilham também no escuro)
     this.roomFx.drawLights(ctx, this.sim, this.heads, now, view);
+    // Destruição: colunas de fumaça subindo das áreas atingidas (por cima de tudo, menos os ícones)
+    if (this.anyTheme) {
+      for (const vis of this.areas.values()) {
+        if (vis.theme !== 'destruction' || (vis.room && vis.room.phase !== 'ready')) continue;
+        const p = vis.px;
+        if (!visible(p.x - TILE, p.y - 6 * TILE, p.w + 2 * TILE, p.h + 6 * TILE)) continue;
+        const seed = hash32(vis.id);
+        const n = vis.room ? 2 : 1;
+        for (let i = 0; i < n; i++) {
+          const sx = p.x + 2 * TILE + (((seed >>> (i * 8)) & 255) / 255) * Math.max(1, p.w - 4 * TILE);
+          const sy = p.y + 3 * TILE + (((seed >>> (i * 8 + 4)) & 15) / 15) * Math.max(1, p.h - 5 * TILE);
+          this.safe(() => drawSmoke(ctx, Math.round(sx), Math.round(sy), fxT, seed + i, vis.room ? 1 : 0.8));
+        }
+      }
+    }
 
     // ---- ícones sobre as cabeças (por cima da escuridão)
     for (let i = 0; i < this.iconCount; i++) {
@@ -593,13 +652,22 @@ export class Renderer {
     }
   }
 
-  private drawWalls(vis: AreaVis, anim: BuildAnim, now: number, hour: number): void {
+  private drawWalls(vis: AreaVis, anim: BuildAnim, now: number, hour: number, fxT = now): void {
     const { ctx } = this;
     const p = vis.px;
     if (anim.walls <= 0) return;
     const rise = Math.round((1 - anim.walls) * 10);
     if (anim.walls < 1) ctx.globalAlpha = anim.walls;
     ctx.drawImage(vis.walls, p.x, p.y - WALL_MARGIN + rise);
+    // Destruição: buracos e fuligem na face norte, vidro estilhaçado nas paredes de vidro (antes dos itens dinâmicos)
+    if (vis.theme === 'destruction' && anim.walls >= 1) {
+      for (const wall of vis.layout.walls) {
+        if (wall.kind !== 'face') continue;
+        const seed = hash32(`${vis.id}:${wall.x},${wall.y}`);
+        if (wall.style.pattern === 'glass') this.safe(() => drawBrokenGlass(ctx, { x: wall.x, y: wall.y + rise, w: wall.w, h: 2 * TILE }, seed));
+        else this.safe(() => drawWallDamage(ctx, wall.x, wall.y + rise, wall.w, seed, fxT));
+      }
+    }
     // itens de parede dinâmicos
     for (const w of vis.wallItems) this.drawWallItem(vis, w, now, hour, rise);
     ctx.globalAlpha = 1;
@@ -615,7 +683,7 @@ export class Renderer {
     const { ctx } = this;
     switch (w.kind) {
       case 'window':
-        this.drawWindow(w, hour, now, 1, rise);
+        this.drawWindow(w, hour, now, 1, rise, vis.theme);
         return;
       case 'elevator': {
         const idx = this.elevatorVis.indexOf(w);
@@ -624,7 +692,7 @@ export class Renderer {
         if (!s) return;
         const o = wallItemOrigin(w, s.base);
         ctx.drawImage(s.base.canvas, o.x, o.y + rise);
-        decorateElevator(ctx, this.theme, w.cx, w.baseY + rise);
+        decorateElevator(ctx, vis.theme, w.cx, w.baseY + rise);
         return;
       }
       case 'light_switch': {
@@ -684,7 +752,7 @@ export class Renderer {
     }
   }
 
-  private drawWindow(w: WallVis, hour: number, now: number, alpha: number, rise = 0): void {
+  private drawWindow(w: WallVis, hour: number, now: number, alpha: number, rise = 0, theme: SeasonalTheme = 'none'): void {
     const { ctx } = this;
     const s = wallSprites(this.art, 'window', w.variant, 0, w.seed);
     if (!s) return;
@@ -696,7 +764,7 @@ export class Renderer {
     }
     ctx.globalAlpha *= alpha;
     this.safe(() => this.art.drawWindowView(ctx, { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h }, hour, now, w.seed));
-    drawSeasonalWindow(ctx, this.theme, { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h }, now, w.seed);
+    drawSeasonalWindow(ctx, theme, { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h }, now, w.seed);
     ctx.drawImage(s.base.canvas, o.x, o.y + rise);
   }
 
@@ -776,7 +844,7 @@ export class Renderer {
     const state = this.furnState(f, now);
     const fs = furnitureSprites(this.art, f, state);
     if (!fs) return;
-    const s = front ? fs.front : seasonalFurniture(this.theme, f.kind, area.layout, f.seed) ?? fs.base;
+    const s = front ? fs.front : seasonalFurniture(area.theme, f.kind, area.layout, f.seed) ?? fs.base;
     if (!s) return;
     const dx = Math.round(f.ax - s.ax);
     const dy = Math.round(f.ay - s.ay);
@@ -795,6 +863,10 @@ export class Renderer {
         this.safe(() => this.art.drawScreen(ctx, { x: dx + r.x, y: dy + r.y, w: r.w, h: r.h }, mode, now, f.seed));
       } else if (f.kind === 'coffee_machine' && state === 1) {
         this.drawSteam(f.ax, dy + 2, now, f.seed);
+      } else if (f.kind === 'glass_partition' && area.theme === 'destruction' && f.seed % 3 !== 0) {
+        // divisória de vidro estilhaçada (uma em cada três fica inteira)
+        const r = s.rects?.glass ?? { x: 0, y: 0, w: s.canvas.width, h: Math.round(s.canvas.height * 0.6) };
+        this.safe(() => drawBrokenGlass(ctx, { x: dx + r.x, y: dy + r.y, w: r.w, h: r.h }, f.seed));
       } else if (f.kind === 'arcade' && s.rects?.screen) {
         // duelo no fliperama: as duas máquinas mostram a partida
         const seed = this.sim.social.arcadeSeed();
@@ -856,7 +928,7 @@ export class Renderer {
     req.pose = ch.pose;
     req.held = ch.held;
     req.seated = ch.seated;
-    req.costume = seasonalCostume(this.theme, ch.info.seed);
+    req.costume = seasonalCostume(this.themeOf(ch.info.roomId), ch.info.seed);
     try {
       sprite = this.charSprite(req, ch.animT);
     } catch {
@@ -1057,7 +1129,7 @@ export class Renderer {
       req.pose = ch.pose === 'groom' ? 'groom' : 'stand';
       req.held = ch.pose === 'groom' ? ch.held : 'none';
       req.seated = false;
-      req.costume = seasonalCostume(this.theme, ch.info.seed);
+      req.costume = seasonalCostume(this.themeOf(ch.info.roomId), ch.info.seed);
       let s: Sprite;
       try {
         s = this.charSprite(req, ch.animT);
@@ -1190,46 +1262,33 @@ export class Renderer {
     const x1 = (b.x + b.w) * TILE + 60;
     const step = Math.min(dt, 0.1);
     if (now >= this.nextCarAt) {
+      // depois de um salto de tempo (aba oculta) não recupera os nascimentos perdidos: um por vez
       this.nextCarAt = now + 4000 + Math.random() * 9000;
       const lane = this.exterior.lanes[Math.floor(Math.random() * this.exterior.lanes.length)];
-      const sx = lane && lane.dir > 0 ? x0 : x1;
-      // não nasce em cima de outro veículo da mesma faixa (tenta de novo logo)
-      if (lane && this.cars.some((c) => c.dir === lane.dir && Math.abs(c.x - sx) < 80)) this.nextCarAt = now + 1500;
-      else if (lane) {
-        if (TACTICAL_THEME) {
-          const kind = pickVehicle(Math.random());
-          const sp = VEHICLE_SPECS[kind];
-          this.cars.push({
-            x: sx,
-            y: lane.y,
-            dir: lane.dir,
-            kind,
-            speed: sp.speed[0] + Math.random() * (sp.speed[1] - sp.speed[0]),
-            variant: Math.floor(Math.random() * CAMO_COUNT),
-            odo: 0,
-            front: sp.front,
-            back: sp.back,
-            ly: sp.ly,
-            lights: sp.lights,
-          });
-        } else {
-          this.cars.push({ x: sx, y: lane.y, dir: lane.dir, kind: 'car', speed: 38 + Math.random() * 30, variant: Math.floor(Math.random() * 6), odo: 0, front: 16, back: 16, ly: 7, lights: 1 });
+      if (lane) {
+        const sx = lane.dir > 0 ? x0 : x1;
+        const kind: VehicleKind | 'car' = TACTICAL_THEME ? pickVehicle(Math.random()) : 'car';
+        const sp = kind === 'car' ? null : VEHICLE_SPECS[kind];
+        const ext = sp ? spriteExtent(sp.w, sp.ax, lane.dir) : spriteExtent(36, 18, lane.dir);
+        // só nasce se couber atrás do último da faixa (comprimento do sprite + folga); senão tenta logo
+        if (!canSpawn(this.cars, lane.y, lane.dir, sx, ext.ahead)) this.nextCarAt = now + 1500;
+        else {
+          const cruise = sp ? sp.speed[0] + Math.random() * (sp.speed[1] - sp.speed[0]) : 38 + Math.random() * 30;
+          const v = spawnSpeed(this.cars, lane.y, lane.dir, sx, ext.ahead, cruise);
+          const base = { x: sx, y: lane.y, dir: lane.dir, speed: cruise, v, ...ext, odo: 0 };
+          if (sp && kind !== 'car') this.cars.push({ ...base, kind, variant: Math.floor(Math.random() * CAMO_COUNT), front: sp.front, back: sp.back, ly: sp.ly, lights: sp.lights });
+          else this.cars.push({ ...base, kind: 'car', variant: Math.floor(Math.random() * 6), front: 16, back: 16, ly: 7, lights: 1 });
         }
       }
     }
-    for (const c of this.cars) {
-      // comboio: quem alcança o da frente na mesma faixa acompanha a velocidade dele
-      let v = c.speed;
-      for (const o of this.cars) {
-        if (o === c || o.dir !== c.dir) continue;
-        const gap = (o.x - c.x) * c.dir;
-        if (gap > 0 && gap < c.front + o.back + 14) v = Math.min(v, o.speed * 0.95);
-      }
-      c.x += c.dir * v * step;
-      c.odo += v * step;
-    }
+    // mesma faixa: ninguém se sobrepõe; quem alcança freia e acompanha o da frente
+    const moved = stepTraffic(this.cars, step);
+    for (const c of this.cars) c.odo += moved.get(c) ?? 0;
     if (this.cars.length) this.cars = this.cars.filter((c) => c.x >= x0 - 10 && c.x <= x1 + 10);
-    if (TACTICAL_THEME) this.updateHelis(now, step);
+    if (TACTICAL_THEME) {
+      this.updateHelis(now, step);
+      this.updatePlanes(now, step);
+    }
   }
 
   /** De vez em quando um helicóptero cruza o mapa inteiro (também por cima dos prédios). */
@@ -1280,6 +1339,73 @@ export class Renderer {
   /** Posição desenhada do helicóptero (bob incluso) — usada pela iluminação. */
   heliTop(h: { y: number; alt: number; phase: number }, now: number): number {
     return h.y - h.alt + Math.sin((now + h.phase) / 520) * 1.5;
+  }
+
+  /** De tempos em tempos (45–120 s) um avião cruza o mapa bem alto, em 3–5 s. */
+  private updatePlanes(now: number, step: number): void {
+    const b = this.exterior.bounds;
+    const x0 = b.x * TILE - 140;
+    const x1 = (b.x + b.w) * TILE + 140;
+    const rnd = (r: readonly [number, number]) => r[0] + Math.random() * (r[1] - r[0]);
+    if (this.nextPlaneAt < 0) this.nextPlaneAt = now + 20000 + Math.random() * 40000;
+    if (now >= this.nextPlaneAt) {
+      // um por vez: depois de um salto de tempo não dispara vários de uma vez
+      this.nextPlaneAt = now + rnd(PLANE.every) * 1000;
+      const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+      const yTop = b.y * TILE + 60;
+      const yBot = (b.y + b.h) * TILE - 20;
+      this.planes.push({
+        x: dir > 0 ? x0 : x1,
+        y: yTop + Math.random() * (yBot - yTop),
+        alt: rnd(PLANE.alt),
+        dir,
+        speed: (x1 - x0) / rnd(PLANE.cross),
+        variant: Math.floor(Math.random() * 2),
+        phase: Math.random() * 1000,
+      });
+    }
+    for (const p of this.planes) p.x += p.dir * p.speed * step;
+    if (this.planes.length) this.planes = this.planes.filter((p) => p.x >= x0 - 10 && p.x <= x1 + 10);
+  }
+
+  /** Aviões: sombra pálida longe no chão, rastro de condensação e o avião por cima de tudo. */
+  private drawPlanes(now: number, visible: (x: number, y: number, w: number, h: number) => boolean): void {
+    if (!this.planes.length) return;
+    const { ctx } = this;
+    const night = this.lighting.night;
+    const still = reducedMotion();
+    for (const p of this.planes) {
+      const flip = p.dir < 0;
+      const top = p.y - p.alt;
+      if (visible(p.x - 50, p.y - 18, 100, 36)) {
+        const sh = planeShadowSprite(flip);
+        ctx.globalAlpha = 1 - 0.85 * night;
+        ctx.drawImage(sh.canvas, Math.round(p.x - sh.ax), Math.round(p.y - sh.ay));
+        ctx.globalAlpha = 1;
+      }
+      // rastro: duas faixas finas atrás dos motores, sumindo com a distância (some à noite;
+      // com movimento reduzido fica um rastro curto e fixo, sem ondular)
+      const len = still ? 60 : 180;
+      if (night < 0.85 && visible(p.x - p.dir * len - 10, top - 10, len + 20, 30)) {
+        for (const [ex, ey] of PLANE.exhaust) {
+          const sx = p.x + p.dir * ex;
+          const sy = top + ey;
+          for (let d = 2; d < len; d += 2) {
+            const a = 0.42 * (1 - d / len) * (1 - night);
+            if (a <= 0.02) break;
+            const wob = still ? 0 : Math.sin((d + p.phase) / 23) * Math.min(1, d / 90);
+            const thick = 1 + Math.floor(d / 70);
+            ctx.globalAlpha = a;
+            ctx.fillStyle = '#f2f5f6';
+            ctx.fillRect(Math.round(sx - p.dir * d), Math.round(sy + wob - (thick - 1) / 2), 2, thick);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+      if (!visible(p.x - 50, top - 20, 100, 36)) continue;
+      const s = planeSprite(p.variant, flip);
+      ctx.drawImage(s.canvas, Math.round(p.x - s.ax), Math.round(top - s.ay));
+    }
   }
 
   private drawPingPong(now: number): void {

@@ -1,15 +1,18 @@
 {
   "name": "niko-pixel-permissoes",
   "displayName": "Niko-Pixel: permissões pelo escritório",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Hook PermissionRequest que deixa aprovar ou recusar pelo Niko-Pixel os pedidos de permissão do Claude Code e responder as perguntas do AskUserQuestion; o diálogo continua no terminal e vale o que você responder primeiro.",
   "author": {
-    "name": "LordSigfrid"
+    "name": "LordSigfrid",
+    "url": "https://github.com/LordSigfrid"
   },
   "license": "MIT",
   "keywords": [
     "niko-pixel",
     "permissoes",
     "hooks"
-  ]
+  ],
+  "homepage": "https://github.com/LordSigfrid/niko-pixel#readme",
+  "repository": "https://github.com/LordSigfrid/niko-pixel"
 }

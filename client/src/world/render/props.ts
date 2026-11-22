@@ -4,7 +4,7 @@
 import { mulberry32 } from '../../../../shared/hash';
 import type { PixelBuf } from '../../art/core/pixbuf';
 import type { ExteriorProp } from '../layout/types';
-import { heliBuf, heliShadowBuf, HELI, HELI_SHADOW, streetPropBuf, vehicleBuf, VEHICLE_SPECS, type VehicleKind } from './war-art';
+import { heliBuf, heliShadowBuf, HELI, HELI_SHADOW, PLANE, PLANE_SHADOW, planeBuf, planeShadowBuf, streetPropBuf, vehicleBuf, VEHICLE_SPECS, type VehicleKind } from './war-art';
 
 export interface PropSprite {
   canvas: HTMLCanvasElement;
@@ -469,6 +469,27 @@ export function heliShadowSprite(flip: boolean): PropSprite {
   if (hit) return hit;
   const buf = heliShadowBuf();
   const s = bufSprite(flip ? buf.flipped() : buf, flip ? HELI.w - 1 - HELI_SHADOW.ax : HELI_SHADOW.ax, HELI_SHADOW.ay);
+  cache.set(key, s);
+  return s;
+}
+
+/** Avião de alta altitude (tema tático) e a sua sombra pálida no chão. */
+export function planeSprite(variant: number, flip: boolean): PropSprite {
+  const key = `plane:${variant}:${flip ? 1 : 0}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const buf = planeBuf(variant);
+  const s = bufSprite(flip ? buf.flipped() : buf, flip ? PLANE.w - 1 - PLANE.ax : PLANE.ax, PLANE.ay);
+  cache.set(key, s);
+  return s;
+}
+
+export function planeShadowSprite(flip: boolean): PropSprite {
+  const key = `plane-shadow:${flip ? 1 : 0}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const buf = planeShadowBuf();
+  const s = bufSprite(flip ? buf.flipped() : buf, flip ? PLANE.w - 1 - PLANE_SHADOW.ax : PLANE_SHADOW.ax, PLANE_SHADOW.ay);
   cache.set(key, s);
   return s;
 }

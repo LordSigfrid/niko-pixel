@@ -4,7 +4,7 @@ Obrigado por querer contribuir com o Niko-Pixel! Relatos de bugs, ideias e melho
 
 ## Antes de começar
 
-- Para bugs e ideias, procure nas [issues](https://github.com/SEU-USUARIO/niko-pixel/issues) se o assunto já foi registrado.
+- Para bugs e ideias, procure nas [issues](https://github.com/LordSigfrid/niko-pixel/issues) se o assunto já foi registrado.
 - Para mudanças maiores ou que alterem o comportamento do Niko-Pixel, abra uma issue para conversar sobre a proposta antes de implementar.
 - Prefira mudanças pequenas e focadas. Se a alteração muda o que aparece ou acontece no escritório, descreva esse comportamento no pull request.
 

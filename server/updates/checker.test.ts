@@ -7,10 +7,10 @@ import { compareVersions, MANUAL_GAP_MS, parseGithubRepo, parseVersion, UpdateCh
 
 setQuiet(true);
 
-const REPO = 'SEU-USUARIO/niko-pixel';
+const REPO = 'LordSigfrid/niko-pixel';
 const RELEASE = {
   tag_name: 'v0.3.0',
-  html_url: 'https://github.com/SEU-USUARIO/niko-pixel/releases/tag/v0.3.0',
+  html_url: 'https://github.com/LordSigfrid/niko-pixel/releases/tag/v0.3.0',
   published_at: '2026-10-08T12:00:00Z',
 };
 
@@ -65,12 +65,12 @@ describe('versões', () => {
 
 describe('parseGithubRepo', () => {
   it('aceita as formas do campo repository', () => {
-    expect(parseGithubRepo('SEU-USUARIO/niko-pixel')).toBe(REPO);
-    expect(parseGithubRepo('github:SEU-USUARIO/niko-pixel')).toBe(REPO);
-    expect(parseGithubRepo('https://github.com/SEU-USUARIO/niko-pixel')).toBe(REPO);
-    expect(parseGithubRepo({ type: 'git', url: 'git+https://github.com/SEU-USUARIO/niko-pixel.git' })).toBe(REPO);
-    expect(parseGithubRepo('git@github.com:SEU-USUARIO/niko-pixel.git')).toBe(REPO);
-    expect(parseGithubRepo('git+ssh://git@github.com/SEU-USUARIO/niko-pixel.git')).toBe(REPO);
+    expect(parseGithubRepo('LordSigfrid/niko-pixel')).toBe(REPO);
+    expect(parseGithubRepo('github:LordSigfrid/niko-pixel')).toBe(REPO);
+    expect(parseGithubRepo('https://github.com/LordSigfrid/niko-pixel')).toBe(REPO);
+    expect(parseGithubRepo({ type: 'git', url: 'git+https://github.com/LordSigfrid/niko-pixel.git' })).toBe(REPO);
+    expect(parseGithubRepo('git@github.com:LordSigfrid/niko-pixel.git')).toBe(REPO);
+    expect(parseGithubRepo('git+ssh://git@github.com/LordSigfrid/niko-pixel.git')).toBe(REPO);
   });
 
   it('recusa o que não é um repositório do GitHub', () => {

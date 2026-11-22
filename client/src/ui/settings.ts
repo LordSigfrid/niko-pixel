@@ -5,6 +5,8 @@ import { h, iconButton, setAttr, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { notificationState, type Notifier } from './notify';
 import type { UiPrefs } from './prefs';
+import { normalizeOfficeTheme, officeThemeOptions, type OfficeTheme } from '../world/api';
+import { TACTICAL_THEME } from '../art/theme';
 import { SoundSettingsGroup } from './settings-sound';
 import type { SoundControl } from './sound';
 import { AboutGroup } from './version';
@@ -137,12 +139,28 @@ export class SettingsPopover implements UiComponent {
       (v) => ctx.updatePrefs({ daylight: v }),
     );
     this.daylight.row.append(h('span', { class: 'ui-set__hint', text: tr('Automático: céu, luzes e sol nas janelas seguem a hora local.') }));
+    // Clássico: Natal/Halloween; tático: Guerra (a base em alerta) e Destruição (a base atingida).
+    const themeNames: Record<OfficeTheme, string> = {
+      auto: tr('Automático'),
+      none: tr('Nenhum'),
+      christmas: tr('Natal'),
+      halloween: tr('Halloween'),
+      war: tr('Guerra'),
+      destruction: tr('Destruição'),
+    };
     this.theme = segmented<UiPrefs['theme']>(
       tr('Tema do quartel-general'),
-      [['auto', tr('Automático')], ['none', tr('Nenhum')], ['christmas', tr('Natal')], ['halloween', tr('Halloween')]],
+      officeThemeOptions().map((v): [OfficeTheme, string] => [v, themeNames[v]]),
       (v) => ctx.updatePrefs({ theme: v }),
     );
-    this.theme.row.append(h('span', { class: 'ui-set__hint', text: tr('Automático: Halloween em outubro e Natal de 1º de novembro a 26 de dezembro; no resto do ano, o visual original. Nenhum: sempre o original.') }));
+    this.theme.row.append(
+      h('span', {
+        class: 'ui-set__hint',
+        text: TACTICAL_THEME
+          ? tr('Automático: cada zona reage aos operadores — Guerra quando alguém aguarda ordem, Destruição quando algo falha. Nenhum: a base limpa.')
+          : tr('Automático: Halloween em outubro e Natal de 1º de novembro a 26 de dezembro; no resto do ano, o visual original. Nenhum: sempre o original.'),
+      }),
+    );
     this.soundGroup = new SoundSettingsGroup(ctx, sound);
 
     // Nomes dos idiomas sempre na própria língua, para quem não entende o idioma atual achar o seu.
@@ -275,7 +293,8 @@ export class SettingsPopover implements UiComponent {
     this.bubbles.set(p.bubbles);
     this.liveliness.set(p.liveliness);
     this.daylight.set(p.daylight);
-    this.theme.set(p.theme);
+    // escolha salva de outro visual (ex.: Natal no tático) aparece como automático
+    this.theme.set(normalizeOfficeTheme(p.theme));
     this.language.set(savedLanguage());
     this.soundGroup.render();
     setHidden(this.demoGroup, this.ctx.store.mock || access().remote);

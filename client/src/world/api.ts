@@ -19,22 +19,40 @@ export interface WorldOptions {
   dayNight: boolean;
   /** (Opcional, aditivo) Ciclo dia/noite: automático, sempre dia ou sempre noite. Vale sobre `dayNight`. */
   daylight?: DaylightMode;
-  /** Tema visual: automático (segue o calendário; ver seasonalThemeFor), nenhum, Natal ou Halloween. */
+  /**
+   * Tema visual. Clássico: automático (segue o calendário; ver seasonalThemeFor), nenhum, Natal ou Halloween.
+   * Tático: automático (cada zona segue os operadores; ver world/zone-theme.ts), nenhum, Guerra ou Destruição.
+   */
   theme?: OfficeTheme;
 }
 
-/** Tema que o renderer desenha: o escritório original ('none') ou um dos sazonais. */
-export type SeasonalTheme = 'none' | 'christmas' | 'halloween';
+/**
+ * Tema que o renderer desenha: o escritório original ('none'), um dos sazonais (visual clássico) ou, no tático,
+ * a base em alerta ('war') ou atingida ('destruction').
+ */
+export type SeasonalTheme = 'none' | 'christmas' | 'halloween' | 'war' | 'destruction';
 export type OfficeTheme = 'auto' | SeasonalTheme;
 
+/** Opções do tema mostradas nas configurações: Natal/Halloween no clássico, Guerra/Destruição no tático. */
+export function officeThemeOptions(tactical: boolean = TACTICAL_THEME): readonly OfficeTheme[] {
+  return tactical ? ['auto', 'none', 'war', 'destruction'] : ['auto', 'none', 'christmas', 'halloween'];
+}
+
+/** Escolha salva que não existe no visual atual (ex.: 'christmas' no tático) vale como automático. */
+export function normalizeOfficeTheme(theme: OfficeTheme | undefined, tactical: boolean = TACTICAL_THEME): OfficeTheme {
+  return theme && officeThemeOptions(tactical).includes(theme) ? theme : 'auto';
+}
+
 /**
- * Tema desenhado numa data (hora local). No automático: Halloween de 1º a 31 de outubro, Natal de 1º de novembro a
- * 26 de dezembro e, no resto do ano, o escritório original.
+ * Tema desenhado numa data (hora local) para o prédio todo. No clássico, automático: Halloween de 1º a 31 de
+ * outubro, Natal de 1º de novembro a 26 de dezembro e, no resto do ano, o escritório original. No tático, o
+ * automático é decidido por zona (world/zone-theme.ts): aqui fica a base limpa.
  */
-export function seasonalThemeFor(theme: OfficeTheme | undefined, date: Date): SeasonalTheme {
-  if (theme && theme !== 'auto') return theme;
+export function seasonalThemeFor(theme: OfficeTheme | undefined, date: Date, tactical: boolean = TACTICAL_THEME): SeasonalTheme {
+  const t = normalizeOfficeTheme(theme, tactical);
+  if (t !== 'auto') return t;
   // O tema tático já tem identidade própria: no automático, nada de Natal/Halloween por cima.
-  if (TACTICAL_THEME) return 'none';
+  if (tactical) return 'none';
   const month = date.getMonth();
   if (month === 9) return 'halloween';
   if (month === 10 || (month === 11 && date.getDate() <= 26)) return 'christmas';

@@ -3,7 +3,7 @@
 import * as artModule from '../art';
 import { TILE, type ArtModule } from '../art/api';
 import type { OfficeStore } from '../net/store';
-import { DEFAULT_WORLD_OPTIONS, seasonalThemeFor, type Selection, type SocialEvent, type SoundCue, type WorldApi, type WorldOptions, type WorldPlayback } from './api';
+import { DEFAULT_WORLD_OPTIONS, normalizeOfficeTheme, seasonalThemeFor, type SeasonalTheme, type Selection, type SocialEvent, type SoundCue, type WorldApi, type WorldOptions, type WorldPlayback } from './api';
 import { loadWorldAssets, type WorldAssets } from './assets';
 import { Camera, overviewFrame } from './camera';
 import { createDebug, type WorldDebug } from './debug';
@@ -15,6 +15,8 @@ import { Overlay } from './render/overlay';
 import { Renderer } from './render/renderer';
 import { Sim } from './sim/sim';
 import { SoundCues } from './sound-cues';
+import { collectZoneSignals, ZoneThemeState, type ZoneAgent } from './zone-theme';
+import { TACTICAL_THEME } from '../art/theme';
 
 export * from './api';
 export type { WorldDebug } from './debug';
@@ -223,6 +225,28 @@ export function createWorld(canvas: HTMLCanvasElement, store: OfficeStore): Worl
 
   // ------------------------------------------------------------------ laço
 
+  // Tema do quartel-general: o prédio todo igual ou, no automático tático, cada zona segue os operadores.
+  const zones = new ZoneThemeState();
+  const zoneTheme = (id: string): SeasonalTheme => zones.get(id);
+  let zonesAt = -Infinity;
+  const themeNow = (now: number): SeasonalTheme | ((id: string) => SeasonalTheme) => {
+    const choice = normalizeOfficeTheme(options.theme);
+    if (!TACTICAL_THEME || choice !== 'auto') return seasonalThemeFor(choice, new Date());
+    if (Math.abs(now - zonesAt) >= 500) {
+      zonesAt = now;
+      const agents: ZoneAgent[] = [];
+      for (const ch of sim.chars.values()) {
+        agents.push({ roomId: ch.info.roomId, status: ch.info.status, activity: ch.info.activity, stormUntil: ch.icon === 'storm' ? ch.iconUntil : 0 });
+      }
+      const alarms: string[] = [];
+      for (const fx of sim.roomFx.active.values()) if (fx.kind === 'alarm' && now < fx.end) alarms.push(fx.roomId);
+      const rooms: string[] = [];
+      for (const r of sim.rooms.values()) if (r.present) rooms.push(r.id);
+      zones.update(rooms, collectZoneSignals(agents, alarms, now), now);
+    }
+    return zoneTheme;
+  };
+
   const loop = (ts: number) => {
     raf = requestAnimationFrame(loop);
     const real = Date.now();
@@ -243,7 +267,7 @@ export function createWorld(canvas: HTMLCanvasElement, store: OfficeStore): Worl
         if (!playback) for (const e of events) for (const cb of socialCbs) cb(e);
         events.length = 0;
       }
-      renderer.sync(seasonalThemeFor(options.theme, new Date()));
+      renderer.sync(themeNow(now));
       if (sim.building.cols !== lastCols) {
         lastCols = sim.building.cols;
         updateBounds();

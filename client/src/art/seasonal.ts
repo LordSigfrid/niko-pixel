@@ -2,7 +2,22 @@
 import { PixelBuf } from './core/pixbuf';
 import type { BufSprite } from './core/sprite';
 
-export type SeasonalProp = 'tree' | 'gift' | 'pumpkin' | 'ghost' | 'wreath' | 'bat';
+export type SeasonalProp = 'tree' | 'gift' | 'pumpkin' | 'ghost' | 'wreath' | 'bat' | 'ammo_stack' | 'sandbag_post' | 'beacon';
+
+/** Caixote de munição verde-oliva com alças, estêncil e faixa amarela (Guerra). */
+function crate(b: PixelBuf, x: number, y: number, w: number, h: number, shade = 0): void {
+  const mid = y + Math.floor(h / 2);
+  b.rect(x, y, w, h, shade ? '#4f5a32' : '#5d6a3a');
+  b.rect(x, y, w, 2, shade ? '#66733f' : '#76854a');
+  b.rect(x, y + h - 1, w, 1, '#3a4224');
+  b.vline(x + 1, y + 2, y + h - 2, '#3f4827');
+  b.vline(x + w - 2, y + 2, y + h - 2, '#3f4827');
+  // estêncil: faixa amarela e marcas de lote
+  b.hline(x + 3, x + w - 4, mid, '#d9b341');
+  b.hline(x + 3, x + 5, mid + 2, '#c9c29a');
+  b.set(x + 7, mid + 2, '#c9c29a');
+  b.rect(x + Math.floor(w / 2) - 1, y + 2, 3, 1, '#2f3520');
+}
 
 export function renderSeasonalProp(kind: SeasonalProp): BufSprite {
   const b = new PixelBuf(40, 64);
@@ -73,6 +88,48 @@ export function renderSeasonalProp(kind: SeasonalProp): BufSprite {
     rect(15, 55, 4, 4, '#c93945');
     rect(21, 55, 4, 4, '#c93945');
     rect(19, 54, 2, 4, '#f07368');
+  } else if (kind === 'ammo_stack') {
+    // Pilha de caixotes de munição sob uma rede de camuflagem.
+    b.shadow(20, 59, 17, 3, '#1c2034', 0.26);
+    crate(b, 4, 47, 16, 12, 1);
+    crate(b, 21, 47, 15, 12);
+    crate(b, 9, 36, 18, 11);
+    crate(b, 13, 27, 12, 9, 1);
+    // rede: trama escura por cima, mais rala nas laterais, com folhas soltas
+    const net = ['#3c4a2c', '#4f5f35', '#2f3a22', '#6b7a45'];
+    for (let y = 24; y < 50; y++) {
+      const half = Math.min(17, 5 + Math.floor((y - 24) * 0.62));
+      for (let x = 20 - half; x <= 20 + half; x++) {
+        const edge = Math.abs(x - 20) > half - 4;
+        if (y > 34 && !edge) continue;
+        if ((x + y) % 3 === 0 || (x * 5 + y * 11) % 7 < 2) b.set(x, y, net[(x * 3 + y * 5) % 4]);
+      }
+    }
+    for (const [x, y] of [[8, 40], [31, 41], [5, 45], [34, 46], [14, 30], [26, 31]]) {
+      rect(x, y, 2, 3, '#4f5f35');
+      b.set(x, y, '#7d8c52');
+    }
+  } else if (kind === 'sandbag_post') {
+    // Posto de sacos de areia em meia-lua, com um caixote atrás.
+    b.shadow(20, 59, 12, 3, '#1c2034', 0.26);
+    crate(b, 14, 43, 12, 8, 1);
+    const tones = ['#b39d6e', '#a89262', '#bca777'];
+    const bag = (cx: number, cy: number, i: number) => {
+      b.ellipse(cx, cy, 4, 2.2, tones[i % 3]);
+      b.hline(cx - 2, cx + 1, cy - 1, '#cfbc8f');
+      b.set(cx + 2, cy + 1, '#8a7650');
+    };
+    for (let i = 0; i < 2; i++) bag(16.5 + i * 7, 52, i + 1);
+    for (let i = 0; i < 3; i++) bag(13 + i * 7, 56, i);
+  } else if (kind === 'beacon') {
+    // Sirene de alerta de parede: base escura, cúpula vermelha com reflexo.
+    rect(14, 52, 12, 4, '#2f3332');
+    rect(15, 51, 10, 1, '#4a4f4d');
+    rect(16, 44, 8, 8, '#d0482f');
+    rect(17, 45, 6, 6, '#ec6a3c');
+    rect(17, 45, 2, 3, '#ffc59a');
+    rect(19, 42, 2, 2, '#2f3332');
+    b.hline(16, 23, 48, '#9b2f22');
   } else {
     rect(18, 51, 5, 6, '#47344f');
     rect(10, 50, 9, 4, '#47344f');

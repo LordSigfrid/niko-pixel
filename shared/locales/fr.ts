@@ -2161,6 +2161,9 @@ export const FR: Readonly<Record<string, string>> = {
   "Natal": "Noël",
   "Halloween": "Halloween",
   "Automático: Halloween em outubro e Natal de 1º de novembro a 26 de dezembro; no resto do ano, o visual original. Nenhum: sempre o original.": "Automatique : Halloween en octobre et Noël du 1er novembre au 26 décembre ; le reste de l'année, l'apparence d'origine. Aucun : toujours l'original.",
+  "Automático: cada zona reage aos operadores — Guerra quando alguém aguarda ordem, Destruição quando algo falha. Nenhum: a base limpa.": "Automatique : chaque zone réagit à ses opérateurs — Guerre quand quelqu'un attend des ordres, Destruction quand quelque chose échoue. Aucun : la base propre.",
+  "Guerra": "Guerre",
+  "Destruição": "Destruction",
   "Os textos das atividades vêm do servidor: seguem NIKO_PIXEL_LANG ou o idioma do sistema onde o Niko-Pixel roda (o inglês, só com NIKO_PIXEL_LANG=en).": "Les textes d'activité viennent du serveur : ils suivent NIKO_PIXEL_LANG ou la langue du système où tourne Niko-Pixel (l'anglais, seulement avec NIKO_PIXEL_LANG=en).",
   "Aparência": "Apparence",
 

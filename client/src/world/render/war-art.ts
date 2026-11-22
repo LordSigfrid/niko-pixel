@@ -465,3 +465,117 @@ function brokenLamp(seed: number): PixelBuf {
   b.set(4, 21, '#1f242f');
   return b;
 }
+
+// ------------------------------------------------------------------ avião (alta altitude)
+
+/**
+ * Avião de transporte militar genérico (asa alta enflechada, dois motores, cauda em T), visto de
+ * lado em 3/4 de cima, virado para a direita. Voa bem mais alto que o helicóptero: sombra longe e
+ * pálida, rastro de condensação e cruzamento rápido (o tempo de travessia define a velocidade).
+ */
+export const PLANE = {
+  w: 78,
+  h: 30,
+  /** Âncora: centro da fuselagem. */
+  ax: 40,
+  ay: 15,
+  /** Luzes (relativas à âncora, virado para a direita): ponta da asa de trás (vermelha), da asa da frente (verde), estrobo da cauda e farol do ventre. */
+  navFar: [-11, -12] as const,
+  navNear: [-14, 10] as const,
+  strobe: [-34, -14] as const,
+  beacon: [2, 3] as const,
+  /** Bocais dos motores (início do rastro), relativos à âncora. */
+  exhaust: [[-4, 3], [-11, 7]] as const,
+  /** Altura (px) desenhada acima do chão: a sombra fica a esta distância abaixo. */
+  alt: [118, 150] as const,
+  /** Duração da travessia (s) e intervalo entre aviões (s). */
+  cross: [3.2, 4.6] as const,
+  every: [45, 120] as const,
+};
+const PLANE_PAL: readonly { base: string; dk: string; lt: string; stripe: string }[] = [
+  { base: '#8f979a', dk: '#687074', lt: '#b6bdbf', stripe: '#5d6468' },
+  { base: '#7c8468', dk: '#5b624a', lt: '#a0a88a', stripe: '#4e543e' },
+];
+
+/** Preenche um polígono (pontos inteiros) por linhas de varredura. */
+function fillPoly(b: PixelBuf, pts: readonly (readonly [number, number])[], c: string): void {
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const [, y] of pts) {
+    y0 = Math.min(y0, y);
+    y1 = Math.max(y1, y);
+  }
+  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
+    const xs: number[] = [];
+    for (let i = 0; i < pts.length; i++) {
+      const [ax, ay] = pts[i];
+      const [bx, by] = pts[(i + 1) % pts.length];
+      if (ay === by) continue;
+      const yc = y + 0.5;
+      if ((yc >= ay && yc < by) || (yc >= by && yc < ay)) xs.push(ax + ((yc - ay) / (by - ay)) * (bx - ax));
+    }
+    xs.sort((p, q) => p - q);
+    for (let i = 0; i + 1 < xs.length; i += 2) b.hline(Math.round(xs[i]), Math.round(xs[i + 1]) - 1, y, c);
+  }
+}
+
+/** O avião (sem animação: os motores são a jato). */
+export function planeBuf(variant: number): PixelBuf {
+  const p = PLANE_PAL[((variant % PLANE_PAL.length) + PLANE_PAL.length) % PLANE_PAL.length];
+  const b = new PixelBuf(PLANE.w, PLANE.h);
+  // asa de trás (do outro lado da fuselagem): sobe para trás, mais escura
+  fillPoly(b, [[36, 12], [50, 12], [33, 3], [27, 3]], p.dk);
+  b.hline(28, 33, 3, p.base);
+  // estabilizador de trás, no alto da deriva (cauda em T)
+  fillPoly(b, [[5, 3], [13, 3], [8, 0], [4, 0]], p.dk);
+  // deriva
+  fillPoly(b, [[6, 13], [19, 13], [11, 2], [5, 2]], p.base);
+  b.line(6, 3, 10, 12, p.lt);
+  // fuselagem: tubo com nariz arredondado e cone de cauda subindo
+  fillPoly(b, [[4, 11], [64, 11], [64, 18], [16, 18], [8, 15]], p.base);
+  b.ellipse(66, 14.5, 9, 3.6, p.base);
+  b.hline(10, 70, 11, p.lt);
+  b.hline(14, 68, 12, p.lt);
+  b.hline(18, 66, 17, p.dk);
+  b.hline(20, 64, 18, p.dk);
+  b.hline(22, 62, 15, p.stripe);
+  // janelas da cabine e portinholas
+  b.rect(68, 12, 4, 2, GLASS);
+  b.set(70, 12, GLASS_LT);
+  b.set(73, 13, GLASS);
+  for (let x = 26; x <= 58; x += 4) b.set(x, 13, '#4a5258');
+  b.vline(58, 12, 17, p.dk);
+  // asa da frente: desce para trás, por cima da fuselagem
+  fillPoly(b, [[34, 14], [50, 14], [30, 25], [23, 25]], p.base);
+  b.line(34, 14, 23, 25, p.lt);
+  b.hline(24, 29, 25, p.dk);
+  // motores sob a asa da frente, saindo à frente do bordo de ataque
+  for (const [ex, ey] of [[37, 17], [30, 21]] as const) {
+    b.rect(ex, ey, 9, 3, '#4d5356');
+    b.hline(ex + 1, ex + 7, ey, '#6c7376');
+    b.vline(ex + 8, ey, ey + 2, '#2b2f31');
+    b.set(ex, ey + 1, '#3a3f42');
+  }
+  // estabilizador da frente
+  fillPoly(b, [[6, 14], [15, 14], [8, 19], [4, 19]], p.base);
+  b.outline();
+  // pontas das luzes (as luzes acesas ficam por conta da iluminação)
+  b.set(PLANE.ax + PLANE.navFar[0], PLANE.ay + PLANE.navFar[1], '#c0392e');
+  b.set(PLANE.ax + PLANE.navNear[0], PLANE.ay + PLANE.navNear[1], '#2fa055');
+  b.set(PLANE.ax + PLANE.strobe[0], PLANE.ay + PLANE.strobe[1], '#e8ecec');
+  return b;
+}
+
+/** Sombra do avião: silhueta vista de cima, pálida (está muito alto). */
+export function planeShadowBuf(): PixelBuf {
+  const b = new PixelBuf(PLANE.w, 30);
+  const c = 'rgba(20,26,22,0.16)';
+  fillPoly(b, [[4, 13], [72, 13], [76, 15], [72, 17], [4, 17]], c);
+  fillPoly(b, [[36, 13], [50, 13], [32, 2], [26, 2]], c);
+  fillPoly(b, [[36, 17], [50, 17], [32, 28], [26, 28]], c);
+  fillPoly(b, [[3, 13], [12, 13], [6, 8], [3, 8]], c);
+  fillPoly(b, [[3, 17], [12, 17], [6, 22], [3, 22]], c);
+  return b;
+}
+/** Âncora da sombra (mesmo x da fuselagem). */
+export const PLANE_SHADOW = { ax: 40, ay: 15 };

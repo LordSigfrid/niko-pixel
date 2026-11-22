@@ -1,10 +1,11 @@
 {
   "name": "niko-pixel-mensagens",
   "displayName": "Niko-Pixel: mensagens pelo escritório",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Leva para a sessão do Claude Code as mensagens que você digita no Niko-Pixel (painel do agente ou terminal), como se você as tivesse digitado no terminal.",
   "author": {
-    "name": "LordSigfrid"
+    "name": "LordSigfrid",
+    "url": "https://github.com/LordSigfrid"
   },
   "license": "MIT",
   "keywords": [
@@ -12,5 +13,7 @@
     "escritorio",
     "mensagens",
     "prompt"
-  ]
+  ],
+  "homepage": "https://github.com/LordSigfrid/niko-pixel#readme",
+  "repository": "https://github.com/LordSigfrid/niko-pixel"
 }

@@ -53,6 +53,8 @@ export interface AreaVis {
   wallItems: WallVis[];
   sign?: WallVis;
   version: number;
+  /** Tema com que os caches (piso, paredes) foram desenhados. */
+  theme: SeasonalTheme;
 }
 
 function makeCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
@@ -241,7 +243,7 @@ export function buildAreaVis(art: ArtModule, layout: AreaLayout, room: RoomState
   wctx.translate(-px.x, -px.y + WALL_MARGIN);
   const order = { face: 0, south: 1, cap: 2 } as const;
   for (const w of [...layout.walls].sort((a, b) => order[a.kind] - order[b.kind])) drawWallSegment(art, wctx, { ...w, style: seasonalWallStyle(theme, w.style) });
-  for (const w of layout.walls) decorateSeasonalWall(wctx, theme, w);
+  for (const w of layout.walls) decorateSeasonalWall(wctx, theme, w, layout.wallItems);
 
   const wallItems: WallVis[] = [];
   let sign: WallVis | undefined;
@@ -281,7 +283,7 @@ export function buildAreaVis(art: ArtModule, layout: AreaLayout, room: RoomState
     };
   });
 
-  return { id: layout.id, layout, room, px, floor, walls, furniture, wallItems, sign, version: room?.version ?? 0 };
+  return { id: layout.id, layout, room, px, floor, walls, furniture, wallItems, sign, version: room?.version ?? 0, theme };
 }
 
 export function toWallVis(it: WallItemPlacement, areaId: string): WallVis {

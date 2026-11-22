@@ -1,10 +1,11 @@
 {
   "name": "niko-pixel",
   "owner": {
-    "name": "LordSigfrid"
+    "name": "LordSigfrid",
+    "url": "https://github.com/LordSigfrid"
   },
   "description": "Plugins do Niko-Pixel, o escritório virtual em pixel art das suas sessões do Claude Code.",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "plugins": [
     {
       "name": "niko-pixel",

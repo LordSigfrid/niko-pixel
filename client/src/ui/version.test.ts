@@ -9,7 +9,7 @@ function snap(version: string, updates?: UpdateStatus): OfficeSnapshot {
   return { rev: 1, serverTime: NOW, rooms: [], agents: [], accounts: [], meta: { demo: false, sources: [], startedAt: 0, version, updates } };
 }
 
-const ok = (patch: Partial<UpdateStatus> = {}): UpdateStatus => ({ state: 'ok', repo: 'SEU-USUARIO/niko-pixel', checkedAt: NOW - 2 * HOUR, available: false, ...patch });
+const ok = (patch: Partial<UpdateStatus> = {}): UpdateStatus => ({ state: 'ok', repo: 'LordSigfrid/niko-pixel', checkedAt: NOW - 2 * HOUR, available: false, ...patch });
 
 describe('versionInfo', () => {
   it('só versões de verdade (o ?mock=1 manda "demo" e o timelapse "timelapse")', () => {
@@ -22,7 +22,7 @@ describe('versionInfo', () => {
 
 describe('safeGithubUrl', () => {
   it('aceita só páginas do GitHub', () => {
-    expect(safeGithubUrl('https://github.com/SEU-USUARIO/niko-pixel/releases/tag/v0.3.0')).toBe('https://github.com/SEU-USUARIO/niko-pixel/releases/tag/v0.3.0');
+    expect(safeGithubUrl('https://github.com/LordSigfrid/niko-pixel/releases/tag/v0.3.0')).toBe('https://github.com/LordSigfrid/niko-pixel/releases/tag/v0.3.0');
     expect(safeGithubUrl('javascript:alert(1)')).toBeUndefined();
     expect(safeGithubUrl('https://github.com.evil.io/x')).toBeUndefined();
     expect(safeGithubUrl('http://github.com/x')).toBeUndefined();
