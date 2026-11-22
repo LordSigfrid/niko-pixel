@@ -160,6 +160,19 @@ npm start
 
 Abra **http://localhost:4747**. Para desenvolver, use `npm run dev` (servidor + Vite com recarga automática).
 
+**Opção C — Windows, num comando só**
+
+Na pasta do projeto, num PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
+```
+
+Instala as dependências, compila, instala o mod no Claude Code, cria um atalho na pasta Inicializar (o Niko-Pixel
+sobe sozinho, sem janela, quando você entra no Windows) e já o inicia em **http://localhost:4747**. O
+`-ExecutionPolicy Bypass` vale só para esse script: a política de execução do Windows não muda. Os logs ficam em
+`~/.niko-pixel/servidor.log`. Para desfazer: o mesmo comando com `-Desinstalar`.
+
 Agora abra o Claude Code em qualquer projeto e veja o seu agente chegar pelo elevador. 🎉
 
 ### 3. Instale o mod do Niko-Pixel no Claude Code (recomendado)

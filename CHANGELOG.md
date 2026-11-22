@@ -33,6 +33,10 @@ do meio (0.**3**.0).
   permissão, **Autorizar** e **Negar** respondem ali mesmo (o terminal continua valendo: vale o que vier primeiro);
   **Abrir** abre o Niko-Pixel; o ✕ dispensa até o próximo pedido. Vários pedidos se empilham. Só no Windows, fora do
   Docker (janela WPF pelo PowerShell que já vem no sistema); `NIKO_PIXEL_RADIO=0` desliga.
+- **Instalador para Windows.** `powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1` instala,
+  compila, põe o mod no Claude Code, cria o atalho de inicialização (o Niko-Pixel sobe sozinho, sem janela) e já o
+  inicia; `-Desinstalar` desfaz. O `npm run mod:install` agora acha sozinho o Claude Code instalado pelo npm no
+  Windows (o atalho `claude.cmd`).
 
 - **OpenCode, Gemini CLI e Qwen Code no escritório (só leitura).** O Niko-Pixel lê as sessões que essas ferramentas
   gravam no computador (OpenCode: `~/.local/share/opencode`, o `opencode.db` ou a pasta `storage/`; Gemini CLI:

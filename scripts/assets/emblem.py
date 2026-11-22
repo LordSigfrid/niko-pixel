@@ -106,6 +106,9 @@ def main() -> None:
     big(m32, 192, bg=night).save(OUT / "icon-192.png")
     big(m32, 512, bg=night).save(OUT / "icon-512.png")
     big(m32, 180, bg=night).convert("RGB").save(OUT / "apple-touch-icon.png")
+    # Ícone do atalho do Windows (scripts/install-windows.ps1).
+    ico = m32.resize((256, 256), Image.NEAREST)
+    ico.save(OUT / "niko-pixel.ico", sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     # Versão detalhada (og-image, tela de abertura): o mesmo emblema desenhado em 64 px, no tamanho do antigo prédio.
     detailed = Image.new("RGBA", (78, 86), (0, 0, 0, 0))
     e64 = emblem(72)
