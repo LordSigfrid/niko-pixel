@@ -72,6 +72,27 @@ describe('rádio: serviço', () => {
     expect(f.sent.at(-1)).toEqual({ type: 'hide', id: 'a1#p1' });
   });
 
+  it('depois de Autorizar, a espera que sobra do mesmo operador não abre outra janela', () => {
+    const f = fakeHost();
+    let t = 1000;
+    const r = new Radio({ createHost: () => f.host, open: () => {}, decide: () => 'ok', now: () => t });
+    r.start();
+    r.update(snap([agent({ status: 'waiting', permission: perm() })]));
+    f.act('allow', 'a1#p1');
+    const before = f.sent.length;
+    // O pedido sumiu, mas o status ainda diz "aguardando" por um instante.
+    r.update(snap([agent({ status: 'waiting' })]));
+    expect(f.sent.length).toBe(before);
+    // Um pedido NOVO do mesmo operador aparece normalmente.
+    r.update(snap([agent({ status: 'waiting', permission: perm({ id: 'p2' }) })]));
+    expect(f.sent.at(-1)).toMatchObject({ type: 'show', alert: { id: 'a1#p2' } });
+    // Passado o intervalo, uma espera dele volta a avisar.
+    t += 20_000;
+    const mark = f.sent.length;
+    r.update(snap([agent({ status: 'waiting' })]));
+    expect(f.sent.slice(mark)).toContainEqual(expect.objectContaining({ type: 'show', alert: expect.objectContaining({ id: 'a1#w' }) }));
+  });
+
   it('Abrir chama o navegador; pergunta não aceita Autorizar', () => {
     const f = fakeHost();
     const opened: string[] = [];

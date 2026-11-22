@@ -27,7 +27,11 @@ export interface RadioOptions {
   log?: (msg: string) => void;
   /** Tentativas de reabrir a janela se ela cair. */
   maxRestarts?: number;
+  now?: () => number;
 }
+
+/** Quanto tempo, depois de Autorizar/Negar, a espera do mesmo operador não vira alerta. */
+export const DECIDED_QUIET_MS = 15_000;
 
 export class Radio {
   private host: RadioHost | undefined;
@@ -36,8 +40,17 @@ export class Radio {
   private last: OfficeSnapshot | undefined;
   private restarts = 0;
   private stopped = false;
+  /**
+   * Operadores que acabaram de receber Autorizar/Negar, até quando. Logo depois da decisão o pedido some, mas o status
+   * ainda fica "aguardando" por alguns segundos: sem isso, o mesmo operador reaparecia como um alerta novo.
+   */
+  private readonly decided = new Map<string, number>();
 
   constructor(private readonly opts: RadioOptions) {}
+
+  private now(): number {
+    return this.opts.now?.() ?? Date.now();
+  }
 
   /** Janela aberta: conta como alguém olhando (os pedidos de permissão podem ser respondidos por ela). */
   get active(): boolean {
@@ -62,7 +75,10 @@ export class Radio {
   /** Cada snapshot novo do escritório. */
   update(snap: OfficeSnapshot): void {
     this.last = snap;
-    const next = alertsFrom(snap);
+    const now = this.now();
+    for (const [id, until] of this.decided) if (until <= now) this.decided.delete(id);
+    // Depois de uma decisão, só um pedido NOVO de permissão do mesmo operador volta a aparecer.
+    const next = alertsFrom(snap).filter((a) => !(this.decided.has(a.agentId) && a.kind === 'waiting'));
     // Esquece dispensas de pedidos que já acabaram (um pedido novo do mesmo operador aparece de novo).
     const live = new Set(next.map((a) => a.id));
     for (const id of this.dismissed) if (!live.has(id)) this.dismissed.delete(id);
@@ -110,6 +126,7 @@ export class Radio {
     if ((action === 'allow' || action === 'deny') && a.permId && a.canDecide && this.opts.decide) {
       const r = this.opts.decide(a.permId, { behavior: action });
       if (r !== 'ok') this.opts.log?.(`rádio: decisão "${action}" não aplicada (${r})`);
+      this.decided.set(a.agentId, this.now() + DECIDED_QUIET_MS);
       // O snapshot seguinte tira o alerta; esconde já para a resposta parecer imediata.
       this.shown.delete(id);
       this.dismissed.add(id);
