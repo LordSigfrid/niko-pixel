@@ -39,6 +39,7 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { discoverClaudeDirs, expandHome, isDefaultDir } from '../server/accounts/detect';
+import { runnableClaudeBin, unwrapNpmShim } from '../server/claude-bin';
 import { LEGACY_NAME } from '../server/legacy';
 import { DEFAULT_PORT, installedHook, planUninstall as planHookUninstall } from './hooks-install';
 import {
@@ -974,7 +975,8 @@ async function main(): Promise<void> {
     now: new Date(),
     root: ROOT,
     version: readPackageVersion(ROOT),
-    claude: makeClaudeRunner(parsed.claudeCmd),
+    // Sem --claude: o do PATH, já sem o atalho .cmd do npm no Windows (claude-bin.ts).
+    claude: makeClaudeRunner(parsed.claudeCmd ? unwrapNpmShim(parsed.claudeCmd) : runnableClaudeBin()),
     out: (l) => console.log(l),
   });
 }

@@ -1,7 +1,7 @@
 // Onde está o `claude` do Claude Code neste computador. Usado pelo terminal interativo (pty/manager.ts), pelo Novo
 // agente (spawn/spawn.ts) e pelo auxiliar do host (scripts/codex-bridge.ts). Node puro e sem dependências.
 import { accessSync, constants, statSync } from 'node:fs';
-import { extname, resolve } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 
 /** O arquivo existe e pode ser executado (no Windows basta existir: lá não há permissão de execução). */
 export function isExecutableFile(file: string, platform: NodeJS.Platform = process.platform): boolean {
@@ -30,13 +30,23 @@ export function findExecutable(name: string, env: NodeJS.ProcessEnv = process.en
 }
 
 /**
+ * No Windows, o `claude` instalado pelo npm é um atalho `claude.cmd`, que o Node não executa sem shell (EINVAL). O
+ * executável de verdade fica ao lado, em node_modules/@anthropic-ai/claude-code/bin/claude.exe: usa ele quando existe.
+ */
+export function unwrapNpmShim(file: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform !== 'win32' || !/\.(cmd|bat)$/i.test(file)) return file;
+  const exe = join(dirname(file), 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
+  return isExecutableFile(exe, platform) ? exe : file;
+}
+
+/**
  * O executável do Claude Code: NIKO_PIXEL_CLAUDE_BIN (um caminho, ou um nome procurado
  * no PATH) ou o `claude` do PATH. undefined se não achar.
  */
 export function claudeBinFrom(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string | undefined {
   const set = env.NIKO_PIXEL_CLAUDE_BIN?.trim();
-  if (!set) return findExecutable('claude', env, platform);
-  return /[\\/]/.test(set) ? resolve(set) : findExecutable(set, env, platform);
+  const bin = !set ? findExecutable('claude', env, platform) : /[\\/]/.test(set) ? resolve(set) : findExecutable(set, env, platform);
+  return bin && unwrapNpmShim(bin, platform);
 }
 
 /** O `claude` que dá para rodar: o de claudeBinFrom, se o arquivo existe e é executável. */
