@@ -13,7 +13,7 @@
 <p align="center"><b>English</b> · <a href="README.pt-BR.md">Português</a> · <a href="README.es.md">Español</a> · <a href="README.fr.md">Français</a></p>
 
 <p align="center">
-  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-f0bd4f" />
+  <img alt="Version 1.1.0" src="https://img.shields.io/badge/version-1.1.0-f0bd4f" />
   <img alt="Node.js 22.12+" src="https://img.shields.io/badge/node-%E2%89%A522.12-5fa04e?logo=node.js&logoColor=white" />
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%2F11-0078D4?logo=windows&logoColor=white" />
   <img alt="Zero runtime dependencies" src="https://img.shields.io/badge/runtime%20dependencies-0-8fd14f" />

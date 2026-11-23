@@ -13,10 +13,22 @@ versões anterior a ele está no [CHANGELOG do Habblaud](https://github.com/marm
 
 ## [Não lançado]
 
+## [1.1.0] - 2026-11-22
+
 ### Adicionado
 
 - **Rádio arrastável.** Arraste a placa (fora dos botões) para levar a pilha de alertas para onde quiser; a posição
   fica salva para os próximos alertas, mesmo depois de reiniciar. Duplo clique volta ao topo e centro da tela.
+
+### Alterado
+
+- **Ferramentas de desenvolvimento atualizadas** (vite, vitest, playwright-core e a imagem do Node no Docker). Nada muda
+  para quem usa.
+
+### Corrigido
+
+- **Testes automáticos do GitHub (CI) voltaram a passar**: rodam no Node 24, o mesmo do Docker, e esperam os textos do
+  vocabulário tático.
 
 ## [1.0.0] - 2026-11-22
 
@@ -83,5 +95,6 @@ Primeira versão do Niko-Pixel: o quartel-general tático dos seus agentes de IA
 
 - **Uma conta só aparece como “Claude”** (letra C). Com várias contas do Claude Code, continuam Equipe A, B…
 
-[Não lançado]: https://github.com/LordSigfrid/niko-pixel/compare/v1.0.0...HEAD
+[Não lançado]: https://github.com/LordSigfrid/niko-pixel/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/LordSigfrid/niko-pixel/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/LordSigfrid/niko-pixel/releases/tag/v1.0.0
