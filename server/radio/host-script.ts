@@ -31,17 +31,76 @@ function Get-Area() {
   return [System.Windows.SystemParameters]::WorkArea
 }
 
-function Restack() {
+# Posição da pilha escolhida arrastando (canto superior esquerdo do 1º alerta); $null = topo e centro da tela.
+# Fica salva ao lado deste script e vale para os próximos alertas, mesmo depois de reiniciar.
+$script:posFile = Join-Path $PSScriptRoot 'posicao.json'
+$script:anchor = $null
+try {
+  if (Test-Path $script:posFile) {
+    $p = Get-Content -Raw $script:posFile | ConvertFrom-Json
+    $script:anchor = @{ X = [double]$p.x; Y = [double]$p.y }
+  }
+} catch { $script:anchor = $null }
+
+function Save-Anchor() {
+  try {
+    if ($script:anchor -eq $null) { if (Test-Path $script:posFile) { Remove-Item $script:posFile -Force } }
+    else { (@{ x = $script:anchor.X; y = $script:anchor.Y } | ConvertTo-Json -Compress) | Set-Content -Path $script:posFile -Encoding UTF8 }
+  } catch { }
+}
+
+# Canto da pilha: o salvo (mantido dentro da área visível de todos os monitores) ou o topo e centro.
+function Get-Origin() {
+  if ($script:anchor -ne $null) {
+    $vl = [System.Windows.SystemParameters]::VirtualScreenLeft
+    $vt = [System.Windows.SystemParameters]::VirtualScreenTop
+    $vw = [System.Windows.SystemParameters]::VirtualScreenWidth
+    $vh = [System.Windows.SystemParameters]::VirtualScreenHeight
+    $x = [Math]::Min([Math]::Max($script:anchor.X, $vl), $vl + $vw - $RW)
+    $y = [Math]::Min([Math]::Max($script:anchor.Y, $vt), $vt + $vh - $RH)
+    return @{ X = $x; Y = $y }
+  }
   $area = Get-Area
+  return @{ X = $area.Left + ($area.Width - $RW) / 2; Y = $area.Top + 8 }
+}
+
+function Restack() {
+  $o = Get-Origin
   $i = 0
   foreach ($w in $script:wins) {
-    $top = $area.Top + 8 + $i * ($RH + $RGAP)
-    $anim = New-Object Windows.Media.Animation.DoubleAnimation($top, (New-Object Windows.Duration ([TimeSpan]::FromMilliseconds(180))))
+    $top = $o.Y + $i * ($RH + $RGAP)
+    $from = $w.Top
+    # O valor-base já vai para o destino; a animação só desliza até lá e depois solta (assim arrastar não briga com ela).
+    $w.BeginAnimation([Windows.Window]::TopProperty, $null)
+    $w.Top = $top
+    $anim = New-Object Windows.Media.Animation.DoubleAnimation($from, $top, (New-Object Windows.Duration ([TimeSpan]::FromMilliseconds(180))))
     $anim.EasingFunction = New-Object Windows.Media.Animation.QuadraticEase
+    $anim.FillBehavior = [Windows.Media.Animation.FillBehavior]::Stop
     $w.BeginAnimation([Windows.Window]::TopProperty, $anim)
-    $w.Left = $area.Left + ($area.Width - $RW) / 2
+    $w.Left = $o.X
     $i++
   }
+}
+
+# Arrastar qualquer parte do alerta (menos os botões) move a pilha inteira; duplo clique volta ao topo e centro.
+function Start-Drag($w, $e) {
+  $src = $e.OriginalSource
+  while ($src -ne $null -and -not ($src -is [Windows.Window])) {
+    if ($src -is [Windows.Controls.Primitives.ButtonBase]) { return }
+    $src = [Windows.Media.VisualTreeHelper]::GetParent($src)
+  }
+  if ($e.ClickCount -ge 2) {
+    $script:anchor = $null
+    Save-Anchor
+    Restack
+    return
+  }
+  $w.BeginAnimation([Windows.Window]::TopProperty, $null)
+  $idx = $script:wins.IndexOf($w)
+  try { $w.DragMove() } catch { return }
+  $script:anchor = @{ X = $w.Left; Y = $w.Top - [Math]::Max(0, $idx) * ($RH + $RGAP) }
+  Save-Anchor
+  Restack
 }
 
 $xaml = @'
@@ -128,9 +187,12 @@ function Show-Alert($a) {
     $f.Deny.Add_Click({ param($s, $e) Send-Action 'deny' ([Windows.Window]::GetWindow($s)).Tag.id })
     $f.Open.Add_Click({ param($s, $e) Send-Action 'open' ([Windows.Window]::GetWindow($s)).Tag.id })
     $f.Close.Add_Click({ param($s, $e) $win = [Windows.Window]::GetWindow($s); Send-Action 'dismiss' $win.Tag.id; Hide-Alert $win.Tag.id })
-    $area = Get-Area
-    $w.Left = $area.Left + ($area.Width - $RW) / 2
-    $w.Top = $area.Top - $RH - 10
+    $w.Add_MouseLeftButtonDown({ param($s, $e) Start-Drag $s $e })
+    $w.Cursor = [Windows.Input.Cursors]::SizeAll
+    if ($script:labels.move) { $w.ToolTip = $script:labels.move }
+    $o = Get-Origin
+    $w.Left = $o.X
+    $w.Top = $o.Y - $RH - 10
     Set-Content-Of $w $a
     [void]$script:wins.Add($w)
     $w.Show()

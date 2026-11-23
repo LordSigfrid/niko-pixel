@@ -2629,6 +2629,7 @@ export const FR: Readonly<Record<string, string>> = {
   "NEGAR": "REFUSER",
   "ABRIR": "OUVRIR",
   "Dispensar": "Ignorer",
+  "Arraste para mover · duplo clique volta ao topo": "Faites glisser pour déplacer · double-clic pour revenir en haut",
   "PEDINDO AUTORIZAÇÃO": "DEMANDE D’AUTORISATION",
   "AGUARDANDO ORDEM": "ATTEND LES ORDRES",
 };

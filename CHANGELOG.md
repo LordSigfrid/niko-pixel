@@ -13,6 +13,11 @@ versões anterior a ele está no [CHANGELOG do Habblaud](https://github.com/marm
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Rádio arrastável.** Arraste a placa (fora dos botões) para levar a pilha de alertas para onde quiser; a posição
+  fica salva para os próximos alertas, mesmo depois de reiniciar. Duplo clique volta ao topo e centro da tela.
+
 ## [1.0.0] - 2026-11-22
 
 Primeira versão do Niko-Pixel: o quartel-general tático dos seus agentes de IA.

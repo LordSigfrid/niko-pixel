@@ -32,6 +32,8 @@ export interface RadioLabels {
   deny: string;
   open: string;
   dismiss: string;
+  /** Dica ao passar o mouse: arrastar move, duplo clique volta ao topo. */
+  move: string;
   kind: Record<RadioKind, string>;
 }
 
@@ -42,6 +44,7 @@ export function radioLabels(): RadioLabels {
     deny: tr('NEGAR'),
     open: tr('ABRIR'),
     dismiss: tr('Dispensar'),
+    move: tr('Arraste para mover · duplo clique volta ao topo'),
     kind: {
       permission: tr('PEDINDO AUTORIZAÇÃO'),
       question: tr('AGUARDANDO ORDEM'),
