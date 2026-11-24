@@ -13,6 +13,11 @@ versões anterior a ele está no [CHANGELOG do Habblaud](https://github.com/marm
 
 ## [Não lançado]
 
+### Corrigido
+
+- **Alertas do rádio fora do Alt+Tab.** Cada alerta aparecia no Alt+Tab como uma janela branca, que às vezes ficava lá
+  depois de o alerta fechar. Agora os alertas só aparecem no topo da tela.
+
 ## [1.1.0] - 2026-11-22
 
 ### Adicionado
