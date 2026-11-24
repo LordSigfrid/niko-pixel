@@ -7,6 +7,11 @@
 export const RADIO_HOST_PS1 = String.raw`
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
+# Estilo de janela de ferramenta: sem isso o Windows põe cada alerta no Alt+Tab (e deixa quadros brancos lá depois que ele fecha).
+Add-Type -Namespace NikoRadio -Name Win32 -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern int GetWindowLong(System.IntPtr h, int i);
+[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern int SetWindowLong(System.IntPtr h, int i, int v);
+'@
 [Console]::InputEncoding = [Text.Encoding]::UTF8
 [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false)
 
@@ -195,6 +200,10 @@ function Show-Alert($a) {
     $w.Top = $o.Y - $RH - 10
     Set-Content-Of $w $a
     [void]$script:wins.Add($w)
+    # Antes de mostrar: WS_EX_TOOLWINDOW + WS_EX_NOACTIVATE, sem WS_EX_APPWINDOW (fora do Alt+Tab e da barra de tarefas).
+    $hwnd = (New-Object Windows.Interop.WindowInteropHelper($w)).EnsureHandle()
+    $ex = [NikoRadio.Win32]::GetWindowLong($hwnd, -20)
+    [void][NikoRadio.Win32]::SetWindowLong($hwnd, -20, (($ex -bor 0x80 -bor 0x08000000) -band (-bnot 0x40000)))
     $w.Show()
     [System.Media.SystemSounds]::Asterisk.Play()
     Restack
